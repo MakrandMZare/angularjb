@@ -1,0 +1,186 @@
+<main class="services-screen">
+  <div class="services-layout">
+    <header class="welcome-header">
+      <div class="user-greeting">
+        <div class="user-avatar" aria-hidden="true">N</div>
+        <p>Welcome,<strong>New User</strong></p>
+      </div>
+      <button
+        class="notification-button"
+        type="button"
+        aria-label="Notifications"
+        (click)="showComingSoon('Notifications')"
+      >
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M7 22h18l-2.2-3.1v-5a6.8 6.8 0 0 0-13.6 0v5L7 22Z" />
+          <path d="M13 25a3.2 3.2 0 0 0 6 0" />
+        </svg>
+        <span class="notification-dot"></span>
+      </button>
+    </header>
+
+    <section class="service-section" aria-labelledby="services-title">
+      <h1 id="services-title">Explore Services</h1>
+
+      <div class="service-grid">
+        @for (category of categories; track category.name) {
+          <button
+            class="service-item"
+            type="button"
+            (click)="openCategory(category)"
+            [attr.aria-label]="category.name"
+          >
+            <span class="service-art" aria-hidden="true">
+              @switch (category.icon) {
+                @case ('offline') {
+                  <svg viewBox="0 0 120 100">
+                    <path class="ink" d="M22 39h76l-7-20H29l-7 20Z" />
+                    <path class="orange-fill" d="M22 39h76l-5 12H27l-5-12Z" />
+                    <path class="light-fill" d="M34 39v12M49 39v12M64 39v12M79 39v12M93 39v12" />
+                    <path class="ink" d="M31 51v31h58V51M26 82h68M43 82V62h18v20m10-21h13v13H71z" />
+                    <path class="accent-stroke" d="M24 39h72" />
+                    <path class="orange-fill" d="M76 73h22v12H76z" />
+                    <text x="79" y="82">OPEN</text>
+                  </svg>
+                }
+                @case ('online') {
+                  <svg viewBox="0 0 120 100">
+                    <rect class="light-fill" x="48" y="16" width="57" height="48" rx="5" />
+                    <path class="ink" d="M48 27h57M56 36h27m-27 8h19m-19 8h31" />
+                    <circle class="orange-fill" cx="94" cy="22" r="2" />
+                    <circle class="purple-fill" cx="87" cy="22" r="2" />
+                    <path class="ink" d="m18 48 10 5 7 28h42l7-21H40m-7-7h53" />
+                    <circle class="ink" cx="44" cy="89" r="4" />
+                    <circle class="ink" cx="70" cy="89" r="4" />
+                    <path class="accent-stroke" d="m70 69 37-41m-15 2 17-5-3 17" />
+                    <path class="orange-fill" d="m50 41 2 11h20l3-11z" />
+                  </svg>
+                }
+                @case ('market') {
+                  <svg viewBox="0 0 120 100">
+                    <path class="ink" d="M17 85h91M20 85V19" />
+                    <path class="light-fill" d="M28 66h10v19H28zM45 55h10v30H45zM62 43h10v42H62zM79 31h10v54H79zM96 21h8v64h-8z" />
+                    <path class="accent-stroke" d="m24 67 22-18 17 10 19-25 16-9" />
+                    <path class="orange-fill" d="m91 23 14-4-3 14z" />
+                    <path class="orange-fill" d="M34 39h5v15h-5zM52 30h5v15h-5zM70 25h5v15h-5zM88 13h5v15h-5z" />
+                  </svg>
+                }
+                @case ('provider') {
+                  <svg viewBox="0 0 120 100">
+                    <path class="purple-fill" d="M15 28h36v27H15z" />
+                    <path class="light-fill" d="M23 20h20v8H23z" />
+                    <path class="ink" d="M23 37h20m-16 9h12" />
+                    <path class="orange-fill" d="m73 20 7 3 6-4 7 6-2 7 4 6-4 7-7 1-4 7-8-2-3-7-7-3v-8l6-4z" />
+                    <circle class="light-fill" cx="81" cy="36" r="8" />
+                    <path class="ink" d="m22 76 10-10 12 3 9-7 12 5 9-6 14 7-15 16-18 2-17-4z" />
+                    <path class="accent-stroke" d="m36 74 9 6m5-9 10 7m7-8 7 6" />
+                    <path class="purple-fill" d="M87 61h17v24H87z" />
+                    <path class="orange-fill" d="M91 67h9v12h-9z" />
+                  </svg>
+                }
+                @case ('rental') {
+                  <svg viewBox="0 0 120 100">
+                    <path class="light-fill" d="m20 52 9-19h46l13 19v20H20z" />
+                    <path class="ink" d="m29 48 7-12h34l9 12zM20 55h68v17H20z" />
+                    <circle class="purple-fill" cx="35" cy="72" r="8" />
+                    <circle class="purple-fill" cx="73" cy="72" r="8" />
+                    <circle class="light-fill" cx="35" cy="72" r="3" />
+                    <circle class="light-fill" cx="73" cy="72" r="3" />
+                    <path class="orange-fill" d="M83 16h22v26H83z" />
+                    <path class="ink" d="M88 13v8m12-8v8M86 27h16m-16 8h6m5 0h5" />
+                    <path class="accent-stroke" d="M92 58h13m-7-7 7 7-7 7" />
+                  </svg>
+                }
+                @case ('recharge') {
+                  <svg viewBox="0 0 120 100">
+                    <rect class="purple-fill" x="35" y="8" width="48" height="84" rx="8" />
+                    <rect class="light-fill" x="40" y="18" width="38" height="59" rx="2" />
+                    <circle class="light-fill" cx="59" cy="84" r="3" />
+                    <circle class="orange-fill" cx="59" cy="46" r="15" />
+                    <text x="52" y="51">₹</text>
+                    <path class="accent-stroke" d="m92 31 10-16v15h10L98 50V36H88" />
+                    <path class="ink" d="M45 67h28m-24 0v5m6-5v5m6-5v5m6-5v5" />
+                  </svg>
+                }
+                @case ('jobs') {
+                  <svg viewBox="0 0 120 100">
+                    <rect class="light-fill" x="34" y="16" width="66" height="66" rx="4" />
+                    <path class="ink" d="M34 29h66m-55 12h33m-33 9h27" />
+                    <path class="purple-fill" d="M14 51h20v31H14z" />
+                    <circle class="orange-fill" cx="24" cy="42" r="8" />
+                    <path class="ink" d="M11 92c1-10 6-15 13-15s12 5 13 15" />
+                    <path class="orange-fill" d="M60 66h34v13H60z" />
+                    <text x="66" y="75">APPLY</text>
+                    <circle class="light-fill" cx="90" cy="18" r="15" />
+                    <circle class="ink" cx="90" cy="18" r="11" />
+                    <path class="orange-fill" d="M89 9h3v9h5v3h-8z" />
+                  </svg>
+                }
+                @case ('bills') {
+                  <svg viewBox="0 0 120 100">
+                    <path class="light-fill" d="M22 13h54v73l-7-5-7 5-7-5-7 5-7-5-7 5-7-5-5 5z" />
+                    <path class="ink" d="M34 31h30m-30 9h27m-27 9h29m-29 9h18" />
+                    <path class="orange-fill" d="M61 58h16v16H61z" />
+                    <path class="ink" d="m65 66 4 4 9-10" />
+                    <path class="purple-fill" d="M82 34h25v46H82z" />
+                    <path class="ink" d="M88 42h13m-13 9h13m-13 9h3m5 0h3m-11 7h3m5 0h3" />
+                    <path class="accent-stroke" d="m13 70 15-12" />
+                  </svg>
+                }
+                @case ('booking') {
+                  <svg viewBox="0 0 120 100">
+                    <rect class="light-fill" x="12" y="28" width="66" height="59" rx="5" />
+                    <path class="purple-fill" d="M12 38h66v12H12z" />
+                    <path class="ink" d="M27 21v14m36-14v14M24 59h9m8 0h9m8 0h9m-43 12h9m8 0h9m8 0h9" />
+                    <rect class="orange-fill" x="82" y="13" width="27" height="23" rx="4" />
+                    <path class="ink" d="m88 29 7-12 8 12z" />
+                    <rect class="purple-fill" x="82" y="43" width="27" height="23" rx="4" />
+                    <path class="light-fill" d="M88 54h15m-12-5v10" />
+                    <rect class="orange-fill" x="82" y="73" width="27" height="19" rx="4" />
+                    <path class="light-fill" d="m88 86 5-8 5 8" />
+                  </svg>
+                }
+              }
+            </span>
+            <span class="service-name">{{ category.name }}</span>
+          </button>
+        }
+      </div>
+    </section>
+
+    @if (statusMessage()) {
+      <p class="status-message" role="status">{{ statusMessage() }}</p>
+    }
+
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <a class="nav-item" routerLink="/" aria-label="Home">
+        <svg viewBox="0 0 28 28" aria-hidden="true">
+          <path d="m3 12 11-9 11 9v12h-8v-8h-6v8H3z" />
+        </svg>
+        <span>Home</span>
+      </a>
+      <a class="nav-item is-active" routerLink="/logged-in-services" aria-current="page">
+        <svg viewBox="0 0 28 28" aria-hidden="true">
+          <path d="M4 6h20M4 14h20M4 22h20" />
+          <circle cx="10" cy="6" r="2.5" />
+          <circle cx="18" cy="14" r="2.5" />
+          <circle cx="11" cy="22" r="2.5" />
+        </svg>
+        <span>Services</span>
+      </a>
+      <button class="nav-item" type="button" (click)="showComingSoon('My Profile')">
+        <svg viewBox="0 0 28 28" aria-hidden="true">
+          <circle cx="14" cy="8" r="5" />
+          <path d="M4 25c0-6 4-9 10-9s10 3 10 9z" />
+        </svg>
+        <span>My Profile</span>
+      </button>
+      <button class="nav-item" type="button" (click)="showComingSoon('Notifications')">
+        <svg viewBox="0 0 28 28" aria-hidden="true">
+          <path d="M5 21h18l-2-3v-6a7 7 0 0 0-14 0v6zM11 24a3 3 0 0 0 6 0" />
+        </svg>
+        <span>Notifications</span>
+      </button>
+    </nav>
+  </div>
+</main>

@@ -1,0 +1,38 @@
+<main class="registration-screen">
+  <section class="registration-content" aria-labelledby="registration-title">
+    <div class="logo-frame" aria-label="JB shopping">
+      <img src="/assets/logo/jb_logo_1.png" alt="JB shopping cart logo" />
+    </div>
+
+    <h1 id="registration-title">Create your account</h1>
+    <p class="registration-description">Sign up with your mobile number or email</p>
+
+    <form class="registration-form">
+      <label class="input-wrap">
+        <span class="input-icon" aria-hidden="true">☎</span>
+        <span class="visually-hidden">Mobile number</span>
+        <input type="tel" name="mobile" autocomplete="tel" placeholder="Mobile number" />
+      </label>
+
+      <label class="input-wrap">
+        <span class="input-icon mail-icon" aria-hidden="true">✉</span>
+        <span class="visually-hidden">Email address</span>
+        <input type="email" name="email" autocomplete="email" placeholder="Email address" />
+      </label>
+
+      <button class="continue-button" type="button">Continue</button>
+    </form>
+
+    <div class="separator" aria-hidden="true"><span>or</span></div>
+
+    <button class="google-button" type="button">
+      <span class="google-mark" aria-hidden="true">G</span>
+      Continue with Google
+    </button>
+
+    <p class="terms-copy">
+      By continuing, you agree to the
+      <a href="#" (click)="$event.preventDefault()">Terms and Conditions</a>
+    </p>
+  </section>
+</main>
