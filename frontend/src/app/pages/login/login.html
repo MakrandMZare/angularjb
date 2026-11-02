@@ -1,0 +1,64 @@
+<main class="registration-screen">
+  <section class="registration-content" aria-labelledby="login-title">
+    <div class="logo-frame" aria-label="JB shopping">
+      <img src="/assets/logo/jb_logo_1.png" alt="JB shopping cart logo" />
+    </div>
+
+    <h1 id="login-title">Welcome back</h1>
+    <p class="registration-description">Login with your username, mobile number or email</p>
+
+    <form class="registration-form" [formGroup]="loginForm" (ngSubmit)="login()" novalidate>
+      <label class="input-wrap">
+        <span class="input-icon" aria-hidden="true">👤</span>
+        <span class="visually-hidden">Username, mobile or email</span>
+        <input
+          type="text"
+          name="identifier"
+          formControlName="identifier"
+          autocomplete="username"
+          placeholder="Username / Mobile / Email"
+          [attr.aria-invalid]="loginForm.controls.identifier.invalid && loginForm.controls.identifier.touched"
+        />
+      </label>
+      @if (loginForm.controls.identifier.touched && loginForm.controls.identifier.hasError('required')) {
+        <p class="field-error">Enter your username, mobile number or email.</p>
+      }
+
+      <label class="input-wrap">
+        <span class="input-icon" aria-hidden="true">●</span>
+        <span class="visually-hidden">Password</span>
+        <input
+          type="password"
+          name="password"
+          formControlName="password"
+          autocomplete="current-password"
+          placeholder="Password"
+          [attr.aria-invalid]="loginForm.controls.password.invalid && loginForm.controls.password.touched"
+        />
+      </label>
+      @if (loginForm.controls.password.touched && loginForm.controls.password.invalid) {
+        <p class="field-error">Password must be at least 8 characters.</p>
+      }
+
+      <a class="forgot-password-link" routerLink="/forgot-password">Forgot password?</a>
+
+      <button class="continue-button" type="submit" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Logging in…' : 'Login' }}
+      </button>
+    </form>
+
+    <div class="helper-row">
+      <a routerLink="/register">Create new account</a>
+    </div>
+
+    @if (apiError()) {
+      <p class="form-message error-message" role="alert">{{ apiError() }}</p>
+    }
+    @if (successMessage()) {
+      <div class="form-message success-message" role="status">
+        <p>{{ successMessage() }}</p>
+        <a routerLink="/logged-in-services">Continue to services</a>
+      </div>
+    }
+  </section>
+</main>

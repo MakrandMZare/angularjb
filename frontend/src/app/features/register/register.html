@@ -1,0 +1,118 @@
+<main class="registration-screen">
+  <section class="registration-content" aria-labelledby="registration-title">
+    <div class="logo-frame" aria-label="JB shopping">
+      <img src="/assets/logo/jb_logo_1.png" alt="JB shopping cart logo" />
+    </div>
+
+    <h1 id="registration-title">Create your account</h1>
+    <p class="registration-description">Enter your details to create your account</p>
+
+    <form class="registration-form" [formGroup]="registrationForm" (ngSubmit)="register()" novalidate>
+      <label class="input-wrap">
+        <span class="input-icon" aria-hidden="true">♙</span>
+        <span class="visually-hidden">Username</span>
+        <input
+          type="text"
+          name="username"
+          formControlName="username"
+          autocomplete="username"
+          placeholder="Username"
+          [attr.aria-invalid]="registrationForm.controls.username.invalid && registrationForm.controls.username.touched"
+        />
+      </label>
+      @if (registrationForm.controls.username.touched && registrationForm.controls.username.hasError('required')) {
+        <p class="field-error">Enter a username.</p>
+      }
+
+      <label class="input-wrap">
+        <span class="input-icon" aria-hidden="true">☎</span>
+        <span class="visually-hidden">Mobile number</span>
+        <input
+          type="tel"
+          name="mobile"
+          formControlName="mobile"
+          autocomplete="tel"
+          placeholder="Mobile number"
+          [attr.aria-invalid]="registrationForm.controls.mobile.invalid && registrationForm.controls.mobile.touched"
+        />
+      </label>
+      @if (registrationForm.controls.mobile.touched && registrationForm.controls.mobile.hasError('required')) {
+        <p class="field-error">Enter your mobile number.</p>
+      }
+
+      <label class="input-wrap">
+        <span class="input-icon mail-icon" aria-hidden="true">✉</span>
+        <span class="visually-hidden">Email address</span>
+        <input
+          type="email"
+          name="email"
+          formControlName="email"
+          autocomplete="email"
+          placeholder="Email address"
+          [attr.aria-invalid]="registrationForm.controls.email.invalid && registrationForm.controls.email.touched"
+        />
+      </label>
+      @if (registrationForm.controls.email.touched && registrationForm.controls.email.invalid) {
+        <p class="field-error">Enter a valid email address.</p>
+      }
+
+      <label class="input-wrap">
+        <span class="input-icon" aria-hidden="true">●</span>
+        <span class="visually-hidden">Password</span>
+        <input
+          type="password"
+          name="password"
+          formControlName="password"
+          autocomplete="new-password"
+          placeholder="Password (at least 8 characters)"
+          [attr.aria-invalid]="registrationForm.controls.password.invalid && registrationForm.controls.password.touched"
+        />
+      </label>
+      @if (registrationForm.controls.password.touched && registrationForm.controls.password.invalid) {
+        <p class="field-error">Password must be at least 8 characters.</p>
+      }
+
+      <label class="input-wrap">
+        <span class="input-icon" aria-hidden="true">●</span>
+        <span class="visually-hidden">Confirm password</span>
+        <input
+          type="password"
+          name="confirmPassword"
+          formControlName="confirmPassword"
+          autocomplete="new-password"
+          placeholder="Confirm password"
+          [attr.aria-invalid]="registrationForm.controls.confirmPassword.invalid && registrationForm.controls.confirmPassword.touched || registrationForm.hasError('passwordMismatch') && registrationForm.controls.confirmPassword.touched"
+        />
+      </label>
+      @if (registrationForm.controls.confirmPassword.touched && registrationForm.hasError('passwordMismatch')) {
+        <p class="field-error">Passwords do not match.</p>
+      }
+
+      <label class="terms-checkbox">
+        <input type="checkbox" formControlName="acceptTerms" />
+        <span>
+          I agree to the
+          <a href="#" (click)="$event.preventDefault()">Terms and Conditions</a>
+        </span>
+      </label>
+      @if (registrationForm.controls.acceptTerms.touched && registrationForm.controls.acceptTerms.invalid) {
+        <p class="field-error">Accept the Terms and Conditions to continue.</p>
+      }
+
+      <button class="continue-button" type="submit" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Creating account…' : 'Create account' }}
+      </button>
+    </form>
+
+    @if (apiError()) {
+      <p class="form-message error-message" role="alert">{{ apiError() }}</p>
+    }
+    @if (successMessage()) {
+      <div class="form-message success-message" role="status">
+        <p>{{ successMessage() }}</p>
+        <a routerLink="/logged-in-services">Continue to services</a>
+      </div>
+    }
+  </section>
+</main>
+

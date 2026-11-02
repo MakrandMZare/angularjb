@@ -1,0 +1,20 @@
+<main class="verified-screen">
+  <section class="verified-content" aria-labelledby="verified-title">
+    <img class="brand-mark" src="/assets/logo/jb_logo_1.png" alt="JanBazar" />
+
+    <div class="success-mark" aria-hidden="true">
+      <svg viewBox="0 0 48 48" focusable="false">
+        <path d="m10 24 9 9L38 13" />
+      </svg>
+    </div>
+
+    <h1 id="verified-title">Congratulations, {{ username() }}!</h1>
+    <p class="verified-description">
+      Your email and mobile number are verified, and your account has been created successfully.
+    </p>
+
+    <button class="create-account-button" type="button" (click)="continueToServices()">
+      Continue
+    </button>
+  </section>
+</main>

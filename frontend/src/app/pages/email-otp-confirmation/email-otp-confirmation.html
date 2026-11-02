@@ -1,0 +1,74 @@
+<main class="email-auth-screen">
+  <section class="auth-content" aria-labelledby="verification-title">
+    <img class="brand-mark" src="/assets/logo/jb_logo_1.png" alt="JanBazar" />
+
+    @if (isEmailVerified()) {
+      <div class="verified-mark" aria-hidden="true">✓</div>
+      <h1 id="verification-title">Email verified successfully</h1>
+      <p class="verification-description">
+        Your email is confirmed. We sent a verification code to your mobile number.
+      </p>
+      <button
+        class="verify-button"
+        type="button"
+        (click)="continueToMobileVerification()"
+      >
+        Continue to mobile verification
+      </button>
+    } @else {
+      <div class="mail-icon" aria-hidden="true">
+        <svg viewBox="0 0 64 64" focusable="false">
+          <rect x="11" y="17" width="42" height="30" rx="3" />
+          <path d="m13 20 17 15a3 3 0 0 0 4 0l17-15M13 44l13-12m25 12L38 32" />
+        </svg>
+      </div>
+
+      <h1 id="verification-title">Check your email</h1>
+      <p class="verification-description">
+        Enter the 6-digit code we sent to<br class="desktop-break" />
+        your email address
+      </p>
+
+      <form class="verification-form" (submit)="verifyCode($event)">
+        <div class="code-entry">
+          @for (slot of codeSlots; track slot) {
+            <span
+              class="code-slot"
+              [class.is-active]="verificationCode().length === slot"
+              aria-hidden="true"
+              >{{ verificationCode()[slot] ?? '' }}</span
+            >
+          }
+          <input
+            class="code-input"
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            pattern="[0-9]*"
+            maxlength="6"
+            aria-label="6-digit email verification code"
+            [value]="verificationCode()"
+            (input)="onCodeInput($event)"
+          />
+        </div>
+
+        <button class="verify-button" type="submit" [disabled]="isSubmitting()">
+          {{ isSubmitting() ? 'Verifying…' : 'Verify email' }}
+        </button>
+      </form>
+
+      <button
+        class="text-action resend-action"
+        type="button"
+        [disabled]="isSubmitting()"
+        (click)="resendCode()"
+      >
+        Resend code
+      </button>
+    }
+
+    @if (statusMessage()) {
+      <p class="status-message" role="status">{{ statusMessage() }}</p>
+    }
+  </section>
+</main>

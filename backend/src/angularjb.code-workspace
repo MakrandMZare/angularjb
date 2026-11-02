@@ -1,0 +1,40 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		}
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true,
+		"sqltools.connections": [
+			{
+				"name": "Launch Angular",
+				"type": "chrome",
+				"request": "launch",
+				"preLaunchTask": "npm: start",
+				"url": "http://localhost:4200/",
+				"webRoot": "${workspaceFolder}"
+			},
+			{
+				"mysqlOptions": {
+					"authProtocol": "default",
+					"enableSsl": "Disabled"
+				},
+				"ssh": "Disabled",
+				"previewLimit": 50,
+				"server": "srv2108.hstgr.io",
+				"port": 3306,
+				"driver": "MySQL",
+				"name": "hstgrmysql",
+				"database": "u235926318_datajb26",
+				"username": "u235926318_Jb26d",
+				"password": "ZareJb26"
+			}
+		]
+	},
+	"extensions": {
+		"recommendations": [
+			"hostinger-official.hostinger-connector"
+		]
+	}
+}
