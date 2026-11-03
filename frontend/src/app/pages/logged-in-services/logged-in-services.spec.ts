@@ -27,7 +27,20 @@ describe('LoggedInServices', () => {
     expect(logo.getAttribute('src')).toBe('/assets/logo/jb_logo_1.png');
     expect(logo.getAttribute('alt')).toBe('J shopping cart logo');
     expect(fixture.nativeElement.querySelectorAll('.service-item').length).toBe(9);
-    expect(fixture.nativeElement.querySelectorAll('.service-art mat-icon').length).toBe(9);
+    const categoryImages = Array.from(
+      fixture.nativeElement.querySelectorAll('.service-art img'),
+    ) as HTMLImageElement[];
+    expect(categoryImages.map((image) => image.getAttribute('src'))).toEqual([
+      '/assets/services/offline-shop.svg',
+      '/assets/services/online-store.svg',
+      '/assets/services/stock-market.svg',
+      '/assets/services/service-provider.svg',
+      '/assets/services/vehicle-rental.svg',
+      '/assets/services/recharge.svg',
+      '/assets/services/job.svg',
+      '/assets/services/bill-payment.svg',
+      '/assets/services/online-booking.svg',
+    ]);
   });
 
   it('shows the signed-in user first initial in the avatar', () => {

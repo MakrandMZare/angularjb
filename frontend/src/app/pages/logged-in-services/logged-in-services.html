@@ -37,7 +37,7 @@
             [attr.aria-label]="category.name"
           >
             <span class="service-art" aria-hidden="true">
-              <mat-icon fontSet="material-symbols-outlined">{{ category.icon }}</mat-icon>
+              <img [src]="category.image" alt="" />
             </span>
             <span class="service-name">{{ category.name }}</span>
             <mat-icon

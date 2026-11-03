@@ -4,7 +4,7 @@ import { BottomNav } from '../../shared/components/bottom-nav/bottom-nav';
 
 interface ServiceCategory {
   name: string;
-  icon: string;
+  image: string;
 }
 
 @Component({
@@ -21,15 +21,15 @@ export class LoggedInServices {
   );
 
   readonly categories: ServiceCategory[] = [
-    { name: 'Offline Shop', icon: 'storefront' },
-    { name: 'Online Store', icon: 'shopping_bag' },
-    { name: 'Stock Market', icon: 'trending_up' },
-    { name: 'Service Provider', icon: 'handyman' },
-    { name: 'Vehicle Rental', icon: 'directions_car' },
-    { name: 'Recharge', icon: 'phone_android' },
-    { name: 'Job', icon: 'work' },
-    { name: 'Bill Payment', icon: 'receipt_long' },
-    { name: 'Online Booking', icon: 'event_available' },
+    { name: 'Offline Shop', image: '/assets/services/offline-shop.svg' },
+    { name: 'Online Store', image: '/assets/services/online-store.svg' },
+    { name: 'Stock Market', image: '/assets/services/stock-market.svg' },
+    { name: 'Service Provider', image: '/assets/services/service-provider.svg' },
+    { name: 'Vehicle Rental', image: '/assets/services/vehicle-rental.svg' },
+    { name: 'Recharge', image: '/assets/services/recharge.svg' },
+    { name: 'Job', image: '/assets/services/job.svg' },
+    { name: 'Bill Payment', image: '/assets/services/bill-payment.svg' },
+    { name: 'Online Booking', image: '/assets/services/online-booking.svg' },
   ];
 
   readonly statusMessage = signal('');
