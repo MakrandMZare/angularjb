@@ -1,0 +1,45 @@
+<main class="user-dashboard" aria-labelledby="dashboard-title" [attr.aria-busy]="isLoading()">
+  <h1 id="dashboard-title">Your profile</h1>
+
+  @if (isLoading()) {
+    <p role="status">Loading your profile…</p>
+  } @else if (errorMessage()) {
+    <p role="alert">{{ errorMessage() }}</p>
+    <button type="button" (click)="loadProfile()">Try again</button>
+  } @else if (user(); as profile) {
+    <dl>
+      <div>
+        <dt>Username</dt>
+        <dd>{{ profile.username }}</dd>
+      </div>
+      @if (profile.email) {
+        <div>
+          <dt>Email</dt>
+          <dd>{{ profile.email }}</dd>
+        </div>
+      }
+      @if (profile.mobile) {
+        <div>
+          <dt>Mobile</dt>
+          <dd>{{ profile.mobile }}</dd>
+        </div>
+      }
+      @if (profile.role) {
+        <div>
+          <dt>Role</dt>
+          <dd>{{ profile.role }}</dd>
+        </div>
+      }
+      @if (profile.created_at) {
+        <div>
+          <dt>Member since</dt>
+          <dd>{{ profile.created_at }}</dd>
+        </div>
+      }
+    </dl>
+  }
+  @if (statusMessage()) {
+    <p role="status">{{ statusMessage() }}</p>
+  }
+  <app-bottom-nav (notificationRequested)="showNotificationsComingSoon()" />
+</main>

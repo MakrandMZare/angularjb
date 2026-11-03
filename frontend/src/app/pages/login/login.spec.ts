@@ -9,6 +9,7 @@ describe('Login', () => {
   let httpTesting: HttpTestingController;
 
   beforeEach(async () => {
+    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [Login],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
@@ -21,6 +22,7 @@ describe('Login', () => {
 
   afterEach(() => {
     httpTesting.verify();
+    localStorage.clear();
   });
 
   it('should create', () => {
@@ -76,6 +78,27 @@ describe('Login', () => {
       .flush({ error: 'Username already exists' }, { status: 409, statusText: 'Conflict' });
 
     expect(component.apiError()).toBe('Username already exists');
+    expect(component.isSubmitting()).toBe(false);
+  });
+
+  it('does not report success when the API omits the access token', () => {
+    const component = fixture.componentInstance;
+    component.loginForm.setValue({
+      identifier: 'jane@example.com',
+      password: 'secure-password',
+    });
+    component.login();
+
+    httpTesting.expectOne('http://localhost:3000/api/auth/login').flush({
+      message: 'Login successful',
+      user: { username: 'jane' },
+    });
+
+    expect(component.apiError()).toBe(
+      'The server did not return an access token. Please try again.',
+    );
+    expect(component.successMessage()).toBe('');
+    expect(localStorage.getItem('jwt_token')).toBeNull();
     expect(component.isSubmitting()).toBe(false);
   });
 

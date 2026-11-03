@@ -1,6 +1,8 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { Auth } from '../../core/services/auth';
+import { Api } from '../../services/api';
 
 interface VerifiedUser {
   username: string;
@@ -24,9 +26,9 @@ interface VerificationErrorResponse {
   styleUrl: './mobile-otp-confirmation.scss',
 })
 export class MobileOtpConfirmation {
-  private readonly http = inject(HttpClient);
+  private readonly api = inject(Api);
+  private readonly auth = inject(Auth);
   private readonly router = inject(Router);
-  private readonly authUrl = 'http://localhost:3000/api/auth/register';
 
   readonly codeSlots = [0, 1, 2, 3, 4, 5];
   readonly verificationCode = signal('');
@@ -62,11 +64,8 @@ export class MobileOtpConfirmation {
     }
 
     this.isSubmitting.set(true);
-    this.http
-      .post<VerificationResponse>(`${this.authUrl}/verify-mobile`, {
-        registrationToken,
-        otp: this.verificationCode(),
-      })
+    this.api
+      .verifyMobile(registrationToken, this.verificationCode())
       .subscribe({
         next: (response) => {
           if (!response.token || !response.user) {
@@ -75,7 +74,7 @@ export class MobileOtpConfirmation {
             return;
           }
 
-          localStorage.setItem('jwt_token', response.token);
+          this.auth.setAccessToken(response.token);
           sessionStorage.setItem('registrationUserName', response.user.username);
           this.isMobileVerified.set(true);
           this.statusMessage.set('Your mobile number has been verified successfully.');
@@ -99,8 +98,8 @@ export class MobileOtpConfirmation {
     }
 
     this.isSubmitting.set(true);
-    this.http
-      .post<VerificationResponse>(`${this.authUrl}/resend-mobile`, { registrationToken })
+    this.api
+      .resendMobileCode(registrationToken)
       .subscribe({
         next: (response) => {
           if (response.registrationToken) {

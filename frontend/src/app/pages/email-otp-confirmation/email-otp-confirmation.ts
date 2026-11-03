@@ -1,12 +1,7 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-
-interface VerificationResponse {
-  message: string;
-  registrationToken: string;
-  emailVerified?: boolean;
-}
+import { Api } from '../../services/api';
 
 interface VerificationErrorResponse {
   error?: string;
@@ -20,9 +15,8 @@ interface VerificationErrorResponse {
   styleUrl: './email-otp-confirmation.scss',
 })
 export class EmailOtpConfirmation {
-  private readonly http = inject(HttpClient);
+  private readonly api = inject(Api);
   private readonly router = inject(Router);
-  private readonly authUrl = 'http://localhost:3000/api/auth/register';
 
   readonly codeSlots = [0, 1, 2, 3, 4, 5];
   readonly verificationCode = signal('');
@@ -56,11 +50,8 @@ export class EmailOtpConfirmation {
     }
 
     this.isSubmitting.set(true);
-    this.http
-      .post<VerificationResponse>(`${this.authUrl}/verify-email`, {
-        registrationToken,
-        otp: this.verificationCode(),
-      })
+    this.api
+      .verifyEmail(registrationToken, this.verificationCode())
       .subscribe({
         next: (response) => {
           if (!response.registrationToken) {
@@ -100,8 +91,8 @@ export class EmailOtpConfirmation {
     }
 
     this.isSubmitting.set(true);
-    this.http
-      .post<VerificationResponse>(`${this.authUrl}/resend-email`, { registrationToken })
+    this.api
+      .resendEmailCode(registrationToken)
       .subscribe({
         next: (response) => {
           if (!response.registrationToken) {

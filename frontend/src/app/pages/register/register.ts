@@ -1,14 +1,11 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Api, RegistrationResponse } from '../../services/api';
 
 interface RegisterErrorResponse {
   error?: string;
-}
-
-interface RegisterResponse {
-  registrationToken: string;
 }
 
 @Component({
@@ -18,10 +15,9 @@ interface RegisterResponse {
   templateUrl: './register.html',
 })
 export class Register {
-  private readonly http = inject(HttpClient);
+  private readonly api = inject(Api);
   private readonly formBuilder = inject(FormBuilder);
   private readonly router = inject(Router);
-  private readonly registerUrl = 'http://localhost:3000/api/auth/register';
 
   readonly isSubmitting = signal(false);
   readonly apiError = signal('');
@@ -66,10 +62,10 @@ export class Register {
     this.apiError.set('');
 
     const { username, mobile, email, password } = this.registrationForm.getRawValue();
-    this.http
-      .post<RegisterResponse>(this.registerUrl, { username, mobile, email, password })
+    this.api
+      .register({ username, mobile, email, password })
       .subscribe({
-        next: (response: RegisterResponse) => {
+        next: (response: RegistrationResponse) => {
           if (!response.registrationToken) {
             this.apiError.set('The server did not start email verification. Please try again.');
             this.isSubmitting.set(false);

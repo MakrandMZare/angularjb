@@ -60,6 +60,20 @@ describe('MobileOtpConfirmation', () => {
     httpTestingController.expectNone('http://localhost:3000/api/auth/register/verify-mobile');
   });
 
+  it('does not verify without a registration token', () => {
+    sessionStorage.removeItem('registrationToken');
+    const component = fixture.componentInstance;
+    component.verificationCode.set('654321');
+
+    component.verifyCode(new Event('submit') as SubmitEvent);
+
+    expect(component.statusMessage()).toBe(
+      'Your registration session expired. Please register again.',
+    );
+    expect(component.isSubmitting()).toBe(false);
+    httpTestingController.expectNone('http://localhost:3000/api/auth/register/verify-mobile');
+  });
+
   it('creates the account after successful mobile verification', () => {
     const input = fixture.nativeElement.querySelector('.code-input') as HTMLInputElement;
     input.value = '654321';
@@ -89,5 +103,47 @@ describe('MobileOtpConfirmation', () => {
     expect(navigateByUrl).toHaveBeenCalledWith('/account-verified', {
       state: { username: 'jan' },
     });
+  });
+
+  it('does not report success when the API omits account credentials', () => {
+    const component = fixture.componentInstance;
+    component.verificationCode.set('654321');
+
+    component.verifyCode(new Event('submit') as SubmitEvent);
+
+    httpTestingController
+      .expectOne('http://localhost:3000/api/auth/register/verify-mobile')
+      .flush({ message: 'Account created', user: { username: 'jan' } });
+
+    expect(component.statusMessage()).toBe(
+      'The server could not finish creating your account.',
+    );
+    expect(component.isMobileVerified()).toBe(false);
+    expect(component.isSubmitting()).toBe(false);
+    expect(localStorage.getItem('jwt_token')).toBeNull();
+    expect(sessionStorage.getItem('registrationUserName')).toBeNull();
+  });
+
+  it('updates the registration token after resending the code', () => {
+    const component = fixture.componentInstance;
+
+    component.resendCode();
+
+    const request = httpTestingController.expectOne(
+      'http://localhost:3000/api/auth/register/resend-mobile',
+    );
+    expect(request.request.body).toEqual({
+      registrationToken: 'mobile-registration-token',
+    });
+    request.flush({
+      message: 'A new verification code was sent to your mobile number.',
+      registrationToken: 'refreshed-mobile-token',
+    });
+
+    expect(sessionStorage.getItem('registrationToken')).toBe('refreshed-mobile-token');
+    expect(component.statusMessage()).toBe(
+      'A new verification code was sent to your mobile number.',
+    );
+    expect(component.isSubmitting()).toBe(false);
   });
 });

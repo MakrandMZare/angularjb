@@ -1,5 +1,5 @@
 import { Component, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { BottomNav } from '../../shared/components/bottom-nav/bottom-nav';
 
 type ServiceIcon =
   | 'offline'
@@ -18,7 +18,7 @@ interface ServiceCategory {
 }
 
 @Component({
-  imports: [RouterLink],
+  imports: [BottomNav],
   selector: 'app-logged-in-services',
   templateUrl: './logged-in-services.html',
   styleUrl: './logged-in-services.scss',
@@ -44,5 +44,9 @@ export class LoggedInServices {
 
   showComingSoon(section: string): void {
     this.statusMessage.set(`${section} is coming soon.`);
+  }
+
+  showNotificationsComingSoon(): void {
+    this.showComingSoon('Notifications');
   }
 }

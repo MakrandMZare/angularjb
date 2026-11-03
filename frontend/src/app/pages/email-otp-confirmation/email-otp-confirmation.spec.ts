@@ -82,4 +82,44 @@ describe('EmailOtpConfirmation', () => {
 
     expect(navigateByUrl).toHaveBeenCalledWith('/mobile-otp-confirmation');
   });
+
+  it('does not mark email verified when the API omits the next registration token', () => {
+    const component = fixture.componentInstance;
+    component.verificationCode.set('123456');
+
+    component.verifyCode(new Event('submit') as SubmitEvent);
+
+    httpTestingController
+      .expectOne('http://localhost:3000/api/auth/register/verify-email')
+      .flush({ message: 'Email verified' });
+
+    expect(component.isEmailVerified()).toBe(false);
+    expect(component.statusMessage()).toBe(
+      'The server could not continue the verification process.',
+    );
+    expect(component.isSubmitting()).toBe(false);
+  });
+
+  it('continues to mobile verification when email succeeds but code delivery fails', () => {
+    const component = fixture.componentInstance;
+    component.verificationCode.set('123456');
+
+    component.verifyCode(new Event('submit') as SubmitEvent);
+
+    httpTestingController
+      .expectOne('http://localhost:3000/api/auth/register/verify-email')
+      .flush(
+        {
+          error: 'Mobile OTP delivery failed',
+          registrationToken: 'mobile-registration-token',
+          emailVerified: true,
+        },
+        { status: 502, statusText: 'Bad Gateway' },
+      );
+
+    expect(sessionStorage.getItem('registrationToken')).toBe('mobile-registration-token');
+    expect(navigateByUrl).toHaveBeenCalledWith('/mobile-otp-confirmation', {
+      state: { deliveryError: 'Mobile OTP delivery failed' },
+    });
+  });
 });

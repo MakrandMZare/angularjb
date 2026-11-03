@@ -1,7 +1,9 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Auth } from '../../core/services/auth';
+import { Api } from '../../services/api';
 
 interface LoginErrorResponse {
   error?: string;
@@ -14,9 +16,9 @@ interface LoginErrorResponse {
   templateUrl: './login.html',
 })
 export class Login {
-  private readonly http = inject(HttpClient);
+  private readonly api = inject(Api);
+  private readonly auth = inject(Auth);
   private readonly formBuilder = inject(FormBuilder);
-  private readonly loginUrl = 'http://localhost:3000/api/auth/login';
 
   readonly isSubmitting = signal(false);
   readonly apiError = signal('');
@@ -38,17 +40,21 @@ export class Login {
     this.successMessage.set('');
 
     const { identifier, password } = this.loginForm.getRawValue();
-    this.http
-      .post(this.loginUrl, { identifier: identifier.trim(), password })
+    this.api
+      .login({ identifier: identifier.trim(), password })
       .subscribe({
-        next: (response: any) => {
-          const user = response?.user;
+        next: (response) => {
+          if (!response.token) {
+            this.apiError.set('The server did not return an access token. Please try again.');
+            this.isSubmitting.set(false);
+            return;
+          }
+
+          const user = response.user;
           const username = user?.username ?? 'User';
+          this.auth.setAccessToken(response.token);
           this.successMessage.set(`Welcome back, ${username}.`);
           this.isSubmitting.set(false);
-          if (response?.token) {
-            localStorage.setItem('jwt_token', response.token);
-          }
         },
         error: (error: HttpErrorResponse) => {
           if (error.status === 0) {
