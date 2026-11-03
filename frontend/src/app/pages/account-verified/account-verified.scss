@@ -24,8 +24,8 @@
 
 .brand-mark {
   display: block;
-  width: 120px;
-  height: 120px;
+  width: clamp(160px, 44vw, 190px);
+  height: clamp(160px, 44vw, 190px);
   object-fit: contain;
 }
 
@@ -89,8 +89,8 @@ h1 {
   }
 
   .brand-mark {
-    width: 96px;
-    height: 96px;
+    width: 128px;
+    height: 128px;
   }
 
   h1 {
