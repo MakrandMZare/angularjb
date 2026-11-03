@@ -169,7 +169,7 @@ describe('EmailOtpConfirmation', () => {
     expect(component.isSubmitting()).toBe(false);
   });
 
-  it('continues to mobile verification when email succeeds but code delivery fails', () => {
+  it('opens mobile verification and shows an error when mobile code delivery fails', () => {
     const component = fixture.componentInstance;
     component.verificationCode.set('123456');
 
