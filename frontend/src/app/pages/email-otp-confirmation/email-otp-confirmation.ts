@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { Auth } from '../../core/services/auth';
 import { Api } from '../../services/api';
 
 interface VerificationErrorResponse {
@@ -16,6 +17,7 @@ interface VerificationErrorResponse {
 })
 export class EmailOtpConfirmation implements OnInit {
   private readonly api = inject(Api);
+  private readonly auth = inject(Auth);
   private readonly router = inject(Router);
 
   readonly codeSlots = [0, 1, 2, 3, 4, 5];
@@ -131,28 +133,22 @@ export class EmailOtpConfirmation implements OnInit {
       .verifyEmail(registrationToken, this.verificationCode())
       .subscribe({
         next: (response) => {
-          if (!response.registrationToken) {
-            this.statusMessage.set('The server could not continue the verification process.');
+          if (!response.token || !response.user) {
+            this.statusMessage.set('The server could not finish creating your account.');
             this.isSubmitting.set(false);
             return;
           }
 
-          sessionStorage.setItem('registrationToken', response.registrationToken);
-          sessionStorage.setItem('registrationStep', 'mobile');
-          this.navigateToMobileOtp({
-            statusMessage:
-              response.message || 'Your email is verified. Enter the code sent to your mobile number.',
+          this.auth.setAccessToken(response.token);
+          sessionStorage.setItem('registrationUserName', response.user.username);
+          sessionStorage.setItem('registrationStep', 'complete');
+          sessionStorage.removeItem('registrationToken');
+          void this.router.navigateByUrl('/account-verified', {
+            state: { username: response.user.username },
           });
         },
         error: (error: HttpErrorResponse) => {
           const response = error.error as VerificationErrorResponse;
-          if (response?.registrationToken && response.emailVerified) {
-            sessionStorage.setItem('registrationToken', response.registrationToken);
-            sessionStorage.setItem('registrationStep', 'mobile');
-            this.navigateToMobileOtp({ deliveryError: response.error });
-            return;
-          }
-
           if (error.status === 401 || error.status === 410) {
             sessionStorage.removeItem('registrationToken');
             this.showRecoveryForm.set(true);
@@ -163,25 +159,6 @@ export class EmailOtpConfirmation implements OnInit {
           this.isSubmitting.set(false);
         },
       });
-  }
-
-  private navigateToMobileOtp(state: Record<string, string | undefined>): void {
-    void this.router.navigateByUrl('/mobile-otp-confirmation', { state }).then(
-      (navigated) => {
-        if (!navigated) {
-          this.statusMessage.set(
-            'Email verified, but mobile verification could not be opened. Please try again.',
-          );
-          this.isSubmitting.set(false);
-        }
-      },
-      () => {
-        this.statusMessage.set(
-          'Email verified, but mobile verification could not be opened. Please try again.',
-        );
-        this.isSubmitting.set(false);
-      },
-    );
   }
 
   resendCode(): void {
@@ -238,13 +215,26 @@ export class EmailOtpConfirmation implements OnInit {
     this.isSubmitting.set(true);
     this.api.resumeRegistration(email).subscribe({
       next: (response) => {
+        if (response.token && response.user) {
+          this.auth.setAccessToken(response.token);
+          sessionStorage.setItem('registrationUserName', response.user.username);
+          sessionStorage.setItem('registrationStep', 'complete');
+          sessionStorage.removeItem('registrationToken');
+          void this.router.navigateByUrl('/account-verified', {
+            state: { username: response.user.username },
+          });
+          return;
+        }
+
+        if (!response.registrationToken || !response.step) {
+          this.statusMessage.set('The server could not continue the registration.');
+          this.isSubmitting.set(false);
+          return;
+        }
+
         sessionStorage.setItem('registrationToken', response.registrationToken);
         sessionStorage.setItem('registrationStep', response.step);
         sessionStorage.setItem('registrationEmail', email);
-        if (response.step === 'mobile') {
-          void this.router.navigateByUrl('/mobile-otp-confirmation');
-          return;
-        }
 
         this.showRecoveryForm.set(false);
         this.statusMessage.set(response.message);

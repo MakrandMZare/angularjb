@@ -166,6 +166,23 @@ export class MobileOtpConfirmation {
     this.isSubmitting.set(true);
     this.api.resumeRegistration(email).subscribe({
       next: (response) => {
+        if (response.token && response.user) {
+          this.auth.setAccessToken(response.token);
+          sessionStorage.setItem('registrationUserName', response.user.username);
+          sessionStorage.setItem('registrationStep', 'complete');
+          sessionStorage.removeItem('registrationToken');
+          void this.router.navigateByUrl('/account-verified', {
+            state: { username: response.user.username },
+          });
+          return;
+        }
+
+        if (!response.registrationToken || !response.step) {
+          this.statusMessage.set('The server could not continue the registration.');
+          this.isSubmitting.set(false);
+          return;
+        }
+
         sessionStorage.setItem('registrationToken', response.registrationToken);
         sessionStorage.setItem('registrationStep', response.step);
         sessionStorage.setItem('registrationEmail', email);

@@ -52,8 +52,8 @@
 
     @if (showRecoveryForm()) {
       <p class="recovery-description">
-        Your registration session needs to be restored. Enter the same email address to receive
-        an email code and continue your existing registration.
+        Your registration session needs to be restored. Enter the same email address to continue
+        your existing registration.
       </p>
       <form class="recovery-form" (submit)="resumeRegistration($event)">
         <label for="recovery-email">Email address used to register</label>

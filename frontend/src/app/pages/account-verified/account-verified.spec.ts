@@ -30,13 +30,13 @@ describe('AccountVerified', () => {
     sessionStorage.clear();
   });
 
-  it('welcomes the registered user after account creation', () => {
+  it('welcomes the registered user after email verification and account creation', () => {
     expect(fixture.nativeElement.textContent).toContain('Welcome, Makrand!');
     expect(fixture.nativeElement.textContent).toContain(
-      'Your email and mobile number are verified successfully.',
+      'Your email has been verified successfully, and your JanBazar account has been created',
     );
     expect(fixture.nativeElement.textContent).toContain(
-      'Your JanBazar account has been created for Makrand.',
+      'your JanBazar account has been created for Makrand.',
     );
   });
 

@@ -20,8 +20,12 @@ export interface RegistrationResponse {
   emailVerified?: boolean;
 }
 
-export interface RegistrationResumeResponse extends RegistrationResponse {
-  step: 'email' | 'mobile';
+export interface RegistrationResumeResponse {
+  message: string;
+  registrationToken?: string;
+  step?: 'email' | 'mobile';
+  token?: string;
+  user?: ApiUser;
 }
 
 export interface LoginResponse {
@@ -66,8 +70,8 @@ export class Api {
     });
   }
 
-  verifyEmail(registrationToken: string, otp: string): Observable<RegistrationResponse> {
-    return this.http.post<RegistrationResponse>(`${AUTH_BASE_URL}/register/verify-email`, {
+  verifyEmail(registrationToken: string, otp: string): Observable<AccountCreatedResponse> {
+    return this.http.post<AccountCreatedResponse>(`${AUTH_BASE_URL}/register/verify-email`, {
       registrationToken,
       otp,
     });

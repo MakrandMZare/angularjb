@@ -44,7 +44,11 @@ describe('Api', () => {
       registrationToken: 'email-token',
       otp: '123456',
     });
-    emailVerification.flush({ message: 'Verified', registrationToken: 'mobile-token' });
+    emailVerification.flush({
+      message: 'Verified',
+      token: 'access-token',
+      user: { username: 'jan' },
+    });
 
     service.resendEmailCode('email-token').subscribe();
     const resendEmail = httpTesting.expectOne(

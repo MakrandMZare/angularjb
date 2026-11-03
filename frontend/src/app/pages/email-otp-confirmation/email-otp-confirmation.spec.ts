@@ -43,6 +43,7 @@ describe('EmailOtpConfirmation', () => {
   afterEach(() => {
     httpTestingController.verify();
     sessionStorage.clear();
+    localStorage.clear();
   });
 
   it('renders the email verification screen with six code slots', () => {
@@ -125,7 +126,7 @@ describe('EmailOtpConfirmation', () => {
     httpTestingController.expectNone('http://localhost:3000/api/auth/register/verify-email');
   });
 
-  it('opens mobile verification after the email OTP is accepted', () => {
+  it('creates the account and opens the welcome page after the email OTP is accepted', () => {
     const inputs = fixture.nativeElement.querySelectorAll('.code-input') as NodeListOf<HTMLInputElement>;
     for (let index = 0; index < 6; index += 1) {
       inputs[index].value = String(index + 1);
@@ -142,20 +143,21 @@ describe('EmailOtpConfirmation', () => {
       otp: '123456',
     });
     request.flush({
-      message: 'Email verified successfully.',
-      registrationToken: 'mobile-registration-token',
+      message: 'Email verified and your account has been created.',
+      token: 'access-token',
+      user: { username: 'jan' },
     });
 
-    expect(sessionStorage.getItem('registrationToken')).toBe('mobile-registration-token');
-    expect(sessionStorage.getItem('registrationStep')).toBe('mobile');
-    expect(navigateByUrl).toHaveBeenCalledWith('/mobile-otp-confirmation', {
-      state: {
-        statusMessage: 'Email verified successfully.',
-      },
+    expect(localStorage.getItem('jwt_token')).toBe('access-token');
+    expect(sessionStorage.getItem('registrationUserName')).toBe('jan');
+    expect(sessionStorage.getItem('registrationStep')).toBe('complete');
+    expect(sessionStorage.getItem('registrationToken')).toBeNull();
+    expect(navigateByUrl).toHaveBeenCalledWith('/account-verified', {
+      state: { username: 'jan' },
     });
   });
 
-  it('continues to mobile verification when email was already verified in a prior attempt', () => {
+  it('creates the account when email was verified in a prior attempt', () => {
     const component = fixture.componentInstance;
     component.verificationCode.set('123456');
 
@@ -164,41 +166,18 @@ describe('EmailOtpConfirmation', () => {
     httpTestingController
       .expectOne('http://localhost:3000/api/auth/register/verify-email')
       .flush({
-        message: 'Your mobile verification code was sent recently. Check your phone.',
-        registrationToken: 'mobile-registration-token',
-        emailVerified: true,
+        message: 'Email verified and your account has been created.',
+        token: 'access-token',
+        user: { username: 'jan' },
       });
 
-    expect(sessionStorage.getItem('registrationToken')).toBe('mobile-registration-token');
-    expect(navigateByUrl).toHaveBeenCalledWith('/mobile-otp-confirmation', {
-      state: {
-        statusMessage: 'Your mobile verification code was sent recently. Check your phone.',
-      },
+    expect(localStorage.getItem('jwt_token')).toBe('access-token');
+    expect(navigateByUrl).toHaveBeenCalledWith('/account-verified', {
+      state: { username: 'jan' },
     });
   });
 
-  it('shows an error when the mobile verification route cannot be opened', async () => {
-    navigateByUrl.mockResolvedValue(false);
-    const component = fixture.componentInstance;
-    component.verificationCode.set('123456');
-
-    component.verifyCode(new Event('submit') as SubmitEvent);
-
-    httpTestingController
-      .expectOne('http://localhost:3000/api/auth/register/verify-email')
-      .flush({
-        message: 'Email verified successfully.',
-        registrationToken: 'mobile-registration-token',
-      });
-    await fixture.whenStable();
-
-    expect(component.statusMessage()).toContain(
-      'Email verified, but mobile verification could not be opened.',
-    );
-    expect(component.isSubmitting()).toBe(false);
-  });
-
-  it('does not navigate when the server omits the mobile registration token', () => {
+  it('does not navigate when the server omits account credentials', () => {
     const component = fixture.componentInstance;
     component.verificationCode.set('123456');
 
@@ -210,12 +189,12 @@ describe('EmailOtpConfirmation', () => {
 
     expect(navigateByUrl).not.toHaveBeenCalled();
     expect(component.statusMessage()).toBe(
-      'The server could not continue the verification process.',
+      'The server could not finish creating your account.',
     );
     expect(component.isSubmitting()).toBe(false);
   });
 
-  it('opens mobile verification and shows an error when mobile code delivery fails', () => {
+  it('does not create an account when email verification fails', () => {
     const component = fixture.componentInstance;
     component.verificationCode.set('123456');
 
@@ -224,18 +203,14 @@ describe('EmailOtpConfirmation', () => {
     httpTestingController
       .expectOne('http://localhost:3000/api/auth/register/verify-email')
       .flush(
-        {
-          error: 'Mobile OTP delivery failed',
-          registrationToken: 'mobile-registration-token',
-          emailVerified: true,
-        },
-        { status: 502, statusText: 'Bad Gateway' },
+        { error: 'The email verification code is incorrect' },
+        { status: 400, statusText: 'Bad Request' },
       );
 
-    expect(sessionStorage.getItem('registrationToken')).toBe('mobile-registration-token');
-    expect(navigateByUrl).toHaveBeenCalledWith('/mobile-otp-confirmation', {
-      state: { deliveryError: 'Mobile OTP delivery failed' },
-    });
+    expect(navigateByUrl).not.toHaveBeenCalled();
+    expect(localStorage.getItem('jwt_token')).toBeNull();
+    expect(component.statusMessage()).toBe('The email verification code is incorrect');
+    expect(component.isSubmitting()).toBe(false);
   });
 
   it('resumes the existing registration by email when its token is unavailable', () => {
@@ -259,6 +234,28 @@ describe('EmailOtpConfirmation', () => {
     expect(sessionStorage.getItem('registrationStep')).toBe('email');
     expect(component.showRecoveryForm()).toBe(false);
     expect(component.statusMessage()).toContain('sent to your email');
+  });
+
+  it('opens the welcome page when recovery completes an already-verified registration', () => {
+    const component = fixture.componentInstance;
+    component.showRecoveryForm.set(true);
+    component.recoveryEmail.set('jan@example.com');
+
+    component.resumeRegistration(new Event('submit') as SubmitEvent);
+
+    httpTestingController
+      .expectOne('http://localhost:3000/api/auth/register/resume')
+      .flush({
+        message: 'Email verified and your account has been created.',
+        token: 'access-token',
+        user: { username: 'jan' },
+      });
+
+    expect(localStorage.getItem('jwt_token')).toBe('access-token');
+    expect(sessionStorage.getItem('registrationUserName')).toBe('jan');
+    expect(navigateByUrl).toHaveBeenCalledWith('/account-verified', {
+      state: { username: 'jan' },
+    });
   });
 
   it('automatically restores the email OTP page when the saved token is missing', () => {
