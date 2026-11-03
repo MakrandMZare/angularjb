@@ -3,6 +3,7 @@ import { Home } from './pages/home/home';
 import { Login } from './pages/login/login';
 import { Register } from './pages/register/register';
 import { EmailOtpConfirmation } from './pages/email-otp-confirmation/email-otp-confirmation';
+import { EmailVerified } from './pages/email-verified/email-verified';
 import { MobileOtpConfirmation } from './pages/mobile-otp-confirmation/mobile-otp-confirmation';
 import { AccountVerified } from './pages/account-verified/account-verified';
 import { LoggedInServices } from './pages/logged-in-services/logged-in-services';
@@ -16,6 +17,7 @@ export const routes: Routes = [
   { path: 'register', component: Register },
   { path: 'email-otp-confirmation', component: EmailOtpConfirmation },
   { path: 'email-otp-resend', component: EmailOtpConfirmation },
+  { path: 'email-verified', component: EmailVerified },
   { path: 'mobile-otp-confirmation', component: MobileOtpConfirmation },
   { path: 'account-verified', component: AccountVerified },
   { path: 'logged-in-services', component: LoggedInServices },

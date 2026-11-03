@@ -1,6 +1,6 @@
 # Authentication setup
 
-Registration creates a pending record, sends an email OTP, sends an SMS OTP after email verification, and inserts the user into `users` only after both codes have been confirmed. OTP values are hashed in the database; a registration JWT carries the pending registration ID and current verification step and remains valid for 24 hours. OTP codes themselves expire after 10 minutes.
+Registration creates a pending record and sends an email OTP. After the email OTP is verified, the API inserts the user into `users` in a transaction and returns an access token; mobile OTP verification is not part of this flow. OTP values are hashed in the database, and email OTP values expire after 10 minutes.
 
 If the browser loses the registration token or it expires, `POST /api/auth/register/resume` accepts the registered email address and sends a fresh OTP for the next unverified step. It restores the existing pending registration rather than creating a new one.
 
@@ -11,7 +11,7 @@ Create a MySQL database and set `DATABASE_URL` to point to it. Apply migrations 
 1. `migrations/000_users.sql` creates the user-registration table with unique username, email, and mobile fields and a default `user` role.
 2. `migrations/001_pending_registrations.sql` creates temporary registration and OTP state.
 
-The API issues an access JWT after successful login and after both registration OTPs have been verified. The frontend stores that access token as `jwt_token` in `localStorage`. To call a protected endpoint, include the token in the HTTP `Authorization` header. Replace `<token>` with the actual token value; do not include the angle brackets:
+The API issues an access JWT after successful login and after email verification creates the account. The frontend stores that access token as `jwt_token` in `localStorage`. To call a protected endpoint, include the token in the HTTP `Authorization` header. Replace `<token>` with the actual token value; do not include the angle brackets:
 
 ```http
 Authorization: Bearer eyJhbGciOi...

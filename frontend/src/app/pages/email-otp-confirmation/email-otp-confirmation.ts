@@ -143,9 +143,7 @@ export class EmailOtpConfirmation implements OnInit {
           sessionStorage.setItem('registrationUserName', response.user.username);
           sessionStorage.setItem('registrationStep', 'complete');
           sessionStorage.removeItem('registrationToken');
-          void this.router.navigateByUrl('/account-verified', {
-            state: { username: response.user.username },
-          });
+          void this.navigateToEmailVerifiedPage(response.user.username);
         },
         error: (error: HttpErrorResponse) => {
           const response = error.error as VerificationErrorResponse;
@@ -159,6 +157,25 @@ export class EmailOtpConfirmation implements OnInit {
           this.isSubmitting.set(false);
         },
       });
+  }
+
+  private async navigateToEmailVerifiedPage(username: string): Promise<void> {
+    try {
+      const navigated = await this.router.navigateByUrl('/email-verified', {
+        state: { username },
+      });
+      if (!navigated) {
+        this.statusMessage.set(
+          'Your email was verified and your account was created, but the confirmation page could not be opened.',
+        );
+        this.isSubmitting.set(false);
+      }
+    } catch {
+      this.statusMessage.set(
+        'Your email was verified and your account was created, but the confirmation page could not be opened.',
+      );
+      this.isSubmitting.set(false);
+    }
   }
 
   resendCode(): void {
@@ -220,9 +237,7 @@ export class EmailOtpConfirmation implements OnInit {
           sessionStorage.setItem('registrationUserName', response.user.username);
           sessionStorage.setItem('registrationStep', 'complete');
           sessionStorage.removeItem('registrationToken');
-          void this.router.navigateByUrl('/account-verified', {
-            state: { username: response.user.username },
-          });
+          void this.navigateToEmailVerifiedPage(response.user.username);
           return;
         }
 

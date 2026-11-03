@@ -152,7 +152,7 @@ describe('EmailOtpConfirmation', () => {
     expect(sessionStorage.getItem('registrationUserName')).toBe('jan');
     expect(sessionStorage.getItem('registrationStep')).toBe('complete');
     expect(sessionStorage.getItem('registrationToken')).toBeNull();
-    expect(navigateByUrl).toHaveBeenCalledWith('/account-verified', {
+    expect(navigateByUrl).toHaveBeenCalledWith('/email-verified', {
       state: { username: 'jan' },
     });
   });
@@ -172,9 +172,31 @@ describe('EmailOtpConfirmation', () => {
       });
 
     expect(localStorage.getItem('jwt_token')).toBe('access-token');
-    expect(navigateByUrl).toHaveBeenCalledWith('/account-verified', {
+    expect(navigateByUrl).toHaveBeenCalledWith('/email-verified', {
       state: { username: 'jan' },
     });
+  });
+
+  it('shows an error if the account-verified page cannot be opened', async () => {
+    navigateByUrl.mockResolvedValue(false);
+    const component = fixture.componentInstance;
+    component.verificationCode.set('123456');
+
+    component.verifyCode(new Event('submit') as SubmitEvent);
+
+    httpTestingController
+      .expectOne('http://localhost:3000/api/auth/register/verify-email')
+      .flush({
+        message: 'Email verified and your account has been created.',
+        token: 'access-token',
+        user: { username: 'jan' },
+      });
+    await fixture.whenStable();
+
+    expect(component.statusMessage()).toContain(
+      'Your email was verified and your account was created, but the confirmation page could not be opened.',
+    );
+    expect(component.isSubmitting()).toBe(false);
   });
 
   it('does not navigate when the server omits account credentials', () => {
@@ -253,7 +275,7 @@ describe('EmailOtpConfirmation', () => {
 
     expect(localStorage.getItem('jwt_token')).toBe('access-token');
     expect(sessionStorage.getItem('registrationUserName')).toBe('jan');
-    expect(navigateByUrl).toHaveBeenCalledWith('/account-verified', {
+    expect(navigateByUrl).toHaveBeenCalledWith('/email-verified', {
       state: { username: 'jan' },
     });
   });

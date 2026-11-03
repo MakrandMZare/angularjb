@@ -1,0 +1,20 @@
+<main class="email-verified-screen">
+  <section class="email-verified-content" aria-labelledby="email-verified-title">
+    <img class="brand-mark" src="/assets/logo/jb_logo_1.png" alt="JanBazar" />
+
+    <div class="success-mark" aria-hidden="true">
+      <svg viewBox="0 0 48 48" focusable="false">
+        <path d="m10 24 9 9L38 13" />
+      </svg>
+    </div>
+
+    <h1 id="email-verified-title">Email verified</h1>
+    <p class="email-verified-description">
+      {{ username() }}, your email address has been verified successfully and your account is ready.
+    </p>
+
+    <button class="continue-button" type="button" (click)="continueToWelcome()">
+      Continue
+    </button>
+  </section>
+</main>
