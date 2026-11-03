@@ -33,7 +33,10 @@ describe('AccountVerified', () => {
   it('congratulates the registered user after account creation', () => {
     expect(fixture.nativeElement.textContent).toContain('Congratulations, Makrand!');
     expect(fixture.nativeElement.textContent).toContain(
-      'your account has been created successfully',
+      'Your email and mobile number are verified successfully.',
+    );
+    expect(fixture.nativeElement.textContent).toContain(
+      'Your JanBazar account has been created for Makrand.',
     );
   });
 

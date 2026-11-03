@@ -2,68 +2,79 @@
   <section class="auth-content" aria-labelledby="verification-title">
     <img class="brand-mark" src="/assets/logo/jb_logo_1.png" alt="JanBazar" />
 
-    @if (isMobileVerified()) {
-      <div class="verified-mark" aria-hidden="true">✓</div>
-      <h1 id="verification-title">Mobile verified successfully</h1>
-      <p class="verification-description">
-        Your mobile number is confirmed and your account has been created.
-      </p>
-      <button
-        class="verify-button"
-        type="button"
-        (click)="continueToCongratulations()"
-      >
-        Continue
-      </button>
-    } @else {
-      <div class="phone-icon" aria-hidden="true">
-        <svg viewBox="0 0 64 96" focusable="false">
-          <rect x="9" y="4" width="46" height="88" rx="9" />
-          <path class="phone-screen" d="M14 17h36v59H14z" />
-          <path class="phone-speaker" d="M27 11h10" />
-          <circle class="phone-button" cx="32" cy="84" r="3" />
-        </svg>
+    <div class="phone-icon" aria-hidden="true">
+      <svg viewBox="0 0 64 96" focusable="false">
+        <rect x="9" y="4" width="46" height="88" rx="9" />
+        <path class="phone-screen" d="M14 17h36v59H14z" />
+        <path class="phone-speaker" d="M27 11h10" />
+        <circle class="phone-button" cx="32" cy="84" r="3" />
+      </svg>
+    </div>
+
+    <h1 id="verification-title">Verify your mobile number</h1>
+    <p class="verification-description">Enter the 6-digit code sent to your phone</p>
+
+    <form
+      class="verification-form"
+      [hidden]="showRecoveryForm()"
+      (submit)="verifyCode($event)"
+    >
+      <div class="code-entry">
+        @for (slot of codeSlots; track slot) {
+          <span
+            class="code-slot"
+            [class.is-active]="verificationCode().length === slot"
+            aria-hidden="true"
+            >{{ verificationCode()[slot] ?? '' }}</span
+          >
+        }
+        <input
+          class="code-input"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          pattern="[0-9]*"
+          maxlength="6"
+          aria-label="6-digit mobile verification code"
+          [value]="verificationCode()"
+          (input)="onCodeInput($event)"
+        />
       </div>
 
-      <h1 id="verification-title">Verify your mobile number</h1>
-      <p class="verification-description">Enter the 6-digit code sent to your phone</p>
+      <button class="verify-button" type="submit" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Verifying…' : 'Verify mobile number' }}
+      </button>
+    </form>
 
-      <form class="verification-form" (submit)="verifyCode($event)">
-        <div class="code-entry">
-          @for (slot of codeSlots; track slot) {
-            <span
-              class="code-slot"
-              [class.is-active]="verificationCode().length === slot"
-              aria-hidden="true"
-              >{{ verificationCode()[slot] ?? '' }}</span
-            >
-          }
-          <input
-            class="code-input"
-            type="text"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            pattern="[0-9]*"
-            maxlength="6"
-            aria-label="6-digit mobile verification code"
-            [value]="verificationCode()"
-            (input)="onCodeInput($event)"
-          />
-        </div>
+    <button
+      class="text-action resend-action"
+      type="button"
+      [hidden]="showRecoveryForm()"
+      [disabled]="isSubmitting()"
+      (click)="resendCode()"
+    >
+      Resend code
+    </button>
 
-        <button class="verify-button" type="submit" [disabled]="isSubmitting()">
-          {{ isSubmitting() ? 'Verifying…' : 'Verify mobile number' }}
+    @if (showRecoveryForm()) {
+      <p class="recovery-description">
+        Your registration session may have expired. Enter the same email address to continue
+        your existing registration.
+      </p>
+      <form class="recovery-form" (submit)="resumeRegistration($event)">
+        <label for="recovery-email">Email address used to register</label>
+        <input
+          id="recovery-email"
+          type="email"
+          autocomplete="email"
+          required
+          [value]="recoveryEmail()"
+          (input)="onRecoveryEmailInput($event)"
+        />
+        <button class="verify-button recovery-button" type="submit" [disabled]="isSubmitting()">
+          {{ isSubmitting() ? 'Resuming…' : 'Continue registration' }}
         </button>
       </form>
-
-      <button
-        class="text-action resend-action"
-        type="button"
-        [disabled]="isSubmitting()"
-        (click)="resendCode()"
-      >
-        Resend code
-      </button>
     }
 
     @if (statusMessage()) {

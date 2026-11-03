@@ -27,6 +27,7 @@ app.get('/', (_req, res) => {
     name: 'JanBazar API',
     endpoints: {
       register: 'POST /api/auth/register',
+      resumeRegistration: 'POST /api/auth/register/resume',
       verifyEmail: 'POST /api/auth/register/verify-email',
       resendEmailCode: 'POST /api/auth/register/resend-email',
       verifyMobile: 'POST /api/auth/register/verify-mobile',

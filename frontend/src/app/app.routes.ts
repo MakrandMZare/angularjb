@@ -15,6 +15,7 @@ export const routes: Routes = [
   { path: 'forgot-password', component: ForgotPassword },
   { path: 'register', component: Register },
   { path: 'email-otp-confirmation', component: EmailOtpConfirmation },
+  { path: 'email-otp-resend', component: EmailOtpConfirmation },
   { path: 'mobile-otp-confirmation', component: MobileOtpConfirmation },
   { path: 'account-verified', component: AccountVerified },
   { path: 'logged-in-services', component: LoggedInServices },

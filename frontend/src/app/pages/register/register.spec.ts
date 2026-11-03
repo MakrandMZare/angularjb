@@ -56,4 +56,27 @@ describe('Register', () => {
     expect(sessionStorage.getItem('registrationToken')).toBe('email-registration-token');
     expect(navigateByUrl).toHaveBeenCalledWith('/email-otp-confirmation');
   });
+
+  it('opens email OTP recovery when registration already exists', () => {
+    fixture.componentInstance.registrationForm.setValue({
+      username: 'jan',
+      mobile: '9876543210',
+      email: 'jan@example.com',
+      password: 'secure-password',
+      confirmPassword: 'secure-password',
+      acceptTerms: true,
+    });
+
+    fixture.componentInstance.register();
+    httpTestingController
+      .expectOne('http://localhost:3000/api/auth/register')
+      .flush(
+        { error: 'A registration is already in progress for this username, email or mobile' },
+        { status: 409, statusText: 'Conflict' },
+      );
+
+    expect(sessionStorage.getItem('registrationToken')).toBeNull();
+    expect(sessionStorage.getItem('registrationEmail')).toBe('jan@example.com');
+    expect(navigateByUrl).toHaveBeenCalledWith('/email-otp-confirmation');
+  });
 });

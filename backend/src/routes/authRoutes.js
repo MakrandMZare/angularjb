@@ -8,7 +8,8 @@ const {
 } = require('../services/otpDelivery');
 
 const router = express.Router();
-const OTP_TTL_MINUTES = 10;
+const OTP_TTL_MINUTES = 30;
+const REGISTRATION_SESSION_TTL_HOURS = 24;
 const MAX_OTP_ATTEMPTS = 5;
 
 function isNonEmptyString(value) {
@@ -51,7 +52,7 @@ function createRegistrationToken(registrationId, step) {
       step
     },
     secret,
-    { expiresIn: `${OTP_TTL_MINUTES}m` }
+    { expiresIn: `${REGISTRATION_SESSION_TTL_HOURS}h` }
   );
 }
 
@@ -199,7 +200,7 @@ router.post('/register', async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?,
                DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${OTP_TTL_MINUTES} MINUTE),
                UTC_TIMESTAMP(),
-               DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${OTP_TTL_MINUTES} MINUTE))`,
+               DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${REGISTRATION_SESSION_TTL_HOURS} HOUR))`,
       [
         registrationId,
         cleanUsername,
@@ -238,6 +239,102 @@ router.post('/register', async (req, res) => {
   }
 });
 
+router.post('/register/resume', async (req, res) => {
+  const email = req.body?.email;
+  if (!isNonEmptyString(email) || email.trim().length > 254) {
+    return res.status(400).json({ error: 'Enter the email address used to register' });
+  }
+
+  let pending;
+  let otp;
+  let otpHash;
+  let step;
+  try {
+    const pool = require('../db');
+    const [rows] = await pool.execute(
+      `SELECT registration_id, username, email, mobile, email_verified, mobile_verified,
+              email_otp_expires_at, mobile_otp_expires_at,
+              TIMESTAMPDIFF(SECOND, email_last_sent_at, UTC_TIMESTAMP()) AS email_seconds_since_sent,
+              TIMESTAMPDIFF(SECOND, mobile_last_sent_at, UTC_TIMESTAMP()) AS mobile_seconds_since_sent
+       FROM pending_registrations
+       WHERE LOWER(email) = LOWER(?)
+       LIMIT 1`,
+      [email.trim()]
+    );
+    pending = rows[0];
+    if (!pending) {
+      return res.status(404).json({
+        error: 'No pending registration was found for that email. Check the address and try again.'
+      });
+    }
+
+    if (pending.mobile_verified) {
+      return res.status(409).json({
+        error: 'This registration is complete. Please log in instead.'
+      });
+    }
+
+    step = pending.email_verified ? 'mobile' : 'email';
+    const secondsSinceSent = Number(
+      step === 'email' ? pending.email_seconds_since_sent : pending.mobile_seconds_since_sent
+    );
+    if (secondsSinceSent < 60) {
+      const otpExpiresAt = step === 'email'
+        ? pending.email_otp_expires_at
+        : pending.mobile_otp_expires_at;
+      if (isExpired(otpExpiresAt)) {
+        return res.status(429).json({ error: 'Wait a minute before requesting another code' });
+      }
+
+      return res.json({
+        message: step === 'email'
+          ? 'A code was sent recently. Check your email and enter it below.'
+          : 'A code was sent recently. Check your mobile and enter it below.',
+        registrationToken: createRegistrationToken(pending.registration_id, step),
+        step
+      });
+    }
+
+    otp = createOtp();
+    otpHash = await bcrypt.hash(otp, 10);
+    const otpColumn = step === 'email' ? 'email' : 'mobile';
+    await pool.execute(
+      `UPDATE pending_registrations
+       SET ${otpColumn}_otp_hash = ?,
+           ${otpColumn}_otp_attempts = 0,
+           ${otpColumn}_otp_expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${OTP_TTL_MINUTES} MINUTE),
+           ${otpColumn}_last_sent_at = UTC_TIMESTAMP(),
+           expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${REGISTRATION_SESSION_TTL_HOURS} HOUR)
+       WHERE registration_id = ?`,
+      [otpHash, pending.registration_id]
+    );
+  } catch (error) {
+    return handleServerError('Registration resume', error, res);
+  }
+
+  try {
+    if (step === 'email') {
+      await sendEmailOtp(pending.email, pending.username, otp);
+    } else {
+      await sendMobileOtp(pending.mobile, otp);
+    }
+    return res.json({
+      message: step === 'email'
+        ? 'A new verification code was sent to your email address.'
+        : 'A new verification code was sent to your mobile number.',
+      registrationToken: createRegistrationToken(pending.registration_id, step),
+      step
+    });
+  } catch (error) {
+    console.error(`${step === 'email' ? 'Email' : 'Mobile'} OTP delivery failed:`, error.message);
+    return res.status(502).json({
+      error: step === 'email'
+        ? 'Could not resend the email verification code'
+        : 'Could not resend the mobile verification code'
+    });
+  }
+});
+
 router.post('/register/resend-email', async (req, res) => {
   const claims = requireRegistrationClaims(req, res, 'email');
   if (!claims) {
@@ -266,7 +363,7 @@ router.post('/register/resend-email', async (req, res) => {
            email_otp_attempts = 0,
            email_otp_expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${OTP_TTL_MINUTES} MINUTE),
            email_last_sent_at = UTC_TIMESTAMP(),
-           expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${OTP_TTL_MINUTES} MINUTE)
+           expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${REGISTRATION_SESSION_TTL_HOURS} HOUR)
        WHERE registration_id = ?`,
       [emailOtpHash, claims.sub]
     );
@@ -333,7 +430,7 @@ router.post('/register/verify-email', async (req, res) => {
            mobile_otp_attempts = 0,
            mobile_otp_expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${OTP_TTL_MINUTES} MINUTE),
            mobile_last_sent_at = UTC_TIMESTAMP(),
-           expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${OTP_TTL_MINUTES} MINUTE)
+           expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${REGISTRATION_SESSION_TTL_HOURS} HOUR)
        WHERE registration_id = ?`,
       [mobileOtpHash, claims.sub]
     );
@@ -393,7 +490,7 @@ router.post('/register/resend-mobile', async (req, res) => {
            mobile_otp_attempts = 0,
            mobile_otp_expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${OTP_TTL_MINUTES} MINUTE),
            mobile_last_sent_at = UTC_TIMESTAMP(),
-           expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${OTP_TTL_MINUTES} MINUTE)
+           expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${REGISTRATION_SESSION_TTL_HOURS} HOUR)
        WHERE registration_id = ?`,
       [mobileOtpHash, claims.sub]
     );

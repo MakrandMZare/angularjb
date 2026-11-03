@@ -68,13 +68,13 @@ describe('MobileOtpConfirmation', () => {
     component.verifyCode(new Event('submit') as SubmitEvent);
 
     expect(component.statusMessage()).toBe(
-      'Your registration session expired. Please register again.',
+      'Enter your registered email below to continue the existing registration.',
     );
     expect(component.isSubmitting()).toBe(false);
     httpTestingController.expectNone('http://localhost:3000/api/auth/register/verify-mobile');
   });
 
-  it('creates the account after successful mobile verification', () => {
+  it('creates the account and opens the personalized success page after mobile verification', () => {
     const input = fixture.nativeElement.querySelector('.code-input') as HTMLInputElement;
     input.value = '654321';
     input.dispatchEvent(new Event('input'));
@@ -97,9 +97,6 @@ describe('MobileOtpConfirmation', () => {
 
     expect(localStorage.getItem('jwt_token')).toBe('access-token');
     expect(sessionStorage.getItem('registrationUserName')).toBe('jan');
-    expect(fixture.nativeElement.textContent).toContain('Mobile verified successfully');
-    fixture.nativeElement.querySelector('.verify-button').click();
-
     expect(navigateByUrl).toHaveBeenCalledWith('/account-verified', {
       state: { username: 'jan' },
     });
@@ -118,7 +115,6 @@ describe('MobileOtpConfirmation', () => {
     expect(component.statusMessage()).toBe(
       'The server could not finish creating your account.',
     );
-    expect(component.isMobileVerified()).toBe(false);
     expect(component.isSubmitting()).toBe(false);
     expect(localStorage.getItem('jwt_token')).toBeNull();
     expect(sessionStorage.getItem('registrationUserName')).toBeNull();
@@ -145,5 +141,28 @@ describe('MobileOtpConfirmation', () => {
       'A new verification code was sent to your mobile number.',
     );
     expect(component.isSubmitting()).toBe(false);
+  });
+
+  it('resumes an email-verified registration and restores its mobile step', () => {
+    const component = fixture.componentInstance;
+    component.showRecoveryForm.set(true);
+    component.recoveryEmail.set('jan@example.com');
+
+    component.resumeRegistration(new Event('submit') as SubmitEvent);
+
+    const request = httpTestingController.expectOne(
+      'http://localhost:3000/api/auth/register/resume',
+    );
+    expect(request.request.body).toEqual({ email: 'jan@example.com' });
+    request.flush({
+      message: 'A new verification code was sent to your mobile number.',
+      registrationToken: 'resumed-mobile-token',
+      step: 'mobile',
+    });
+
+    expect(sessionStorage.getItem('registrationToken')).toBe('resumed-mobile-token');
+    expect(sessionStorage.getItem('registrationStep')).toBe('mobile');
+    expect(component.showRecoveryForm()).toBe(false);
+    expect(component.statusMessage()).toContain('sent to your mobile');
   });
 });

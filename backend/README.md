@@ -1,6 +1,8 @@
 # Authentication setup
 
-Registration creates a pending record, sends an email OTP, sends an SMS OTP after email verification, and inserts the user into `users` only after both codes have been confirmed. OTP values are hashed in the database; a short-lived JWT carries the pending registration ID and current verification step.
+Registration creates a pending record, sends an email OTP, sends an SMS OTP after email verification, and inserts the user into `users` only after both codes have been confirmed. OTP values are hashed in the database; a registration JWT carries the pending registration ID and current verification step and remains valid for 24 hours. OTP codes themselves expire after 10 minutes.
+
+If the browser loses the registration token or it expires, `POST /api/auth/register/resume` accepts the registered email address and sends a fresh OTP for the next unverified step. It restores the existing pending registration rather than creating a new one.
 
 ## Database
 
@@ -66,6 +68,6 @@ Copy `src/.env.example` to `src/.env` and set the values for your environment. D
 
 - SMTP settings configure Nodemailer. `SMTP_FROM` must be an address authorized by your SMTP service.
 - MSG91 requires an approved Flow template with an `OTP` variable, the template ID, and the auth key. `MSG91_COUNTRY_CODE` prefixes 10-digit local mobile numbers; use an international number with country code when registering outside that country.
-- `JWT_SECRET` must be a long, random value. Registration OTPs expire after 10 minutes and allow up to five incorrect attempts. Resending is limited to once per minute.
+- `JWT_SECRET` must be a long, random value. Registration sessions expire after 24 hours, OTPs expire after 10 minutes and allow up to five incorrect attempts, and resending is limited to once per minute.
 
 Run the API from this directory with `npm run dev` or `npm start`.

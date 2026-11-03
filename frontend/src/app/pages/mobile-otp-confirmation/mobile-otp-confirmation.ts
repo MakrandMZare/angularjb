@@ -33,10 +33,13 @@ export class MobileOtpConfirmation {
   readonly codeSlots = [0, 1, 2, 3, 4, 5];
   readonly verificationCode = signal('');
   readonly statusMessage = signal(
-    this.router.getCurrentNavigation()?.extras.state?.['deliveryError'] ?? '',
+    this.router.getCurrentNavigation()?.extras.state?.['deliveryError'] ??
+      this.router.getCurrentNavigation()?.extras.state?.['statusMessage'] ??
+      '',
   );
   readonly isSubmitting = signal(false);
-  readonly isMobileVerified = signal(false);
+  readonly showRecoveryForm = signal(!sessionStorage.getItem('registrationToken'));
+  readonly recoveryEmail = signal(sessionStorage.getItem('registrationEmail') ?? '');
 
   onCodeInput(event: Event): void {
     const input = event.target;
@@ -50,6 +53,13 @@ export class MobileOtpConfirmation {
     this.statusMessage.set('');
   }
 
+  onRecoveryEmailInput(event: Event): void {
+    const input = event.target;
+    if (input instanceof HTMLInputElement) {
+      this.recoveryEmail.set(input.value);
+    }
+  }
+
   verifyCode(event: SubmitEvent): void {
     event.preventDefault();
     if (this.verificationCode().length !== 6) {
@@ -59,7 +69,10 @@ export class MobileOtpConfirmation {
 
     const registrationToken = sessionStorage.getItem('registrationToken');
     if (!registrationToken) {
-      this.statusMessage.set('Your registration session expired. Please register again.');
+      this.showRecoveryForm.set(true);
+      this.statusMessage.set(
+        'Enter your registered email below to continue the existing registration.',
+      );
       return;
     }
 
@@ -76,12 +89,18 @@ export class MobileOtpConfirmation {
 
           this.auth.setAccessToken(response.token);
           sessionStorage.setItem('registrationUserName', response.user.username);
-          this.isMobileVerified.set(true);
-          this.statusMessage.set('Your mobile number has been verified successfully.');
-          this.isSubmitting.set(false);
+          sessionStorage.setItem('registrationStep', 'complete');
+          sessionStorage.removeItem('registrationToken');
+          void this.router.navigateByUrl('/account-verified', {
+            state: { username: response.user.username },
+          });
         },
         error: (error: HttpErrorResponse) => {
           const response = error.error as VerificationErrorResponse;
+          if (error.status === 401 || error.status === 410) {
+            sessionStorage.removeItem('registrationToken');
+            this.showRecoveryForm.set(true);
+          }
           this.statusMessage.set(
             response?.error ?? 'Mobile verification failed. Please try again.',
           );
@@ -93,8 +112,17 @@ export class MobileOtpConfirmation {
   resendCode(): void {
     const registrationToken = sessionStorage.getItem('registrationToken');
     if (!registrationToken) {
-      this.statusMessage.set('Your registration session expired. Please register again.');
+      this.showRecoveryForm.set(true);
+      this.statusMessage.set(
+        'Enter your registered email below to continue the existing registration.',
+      );
       return;
+    }
+
+    this.verificationCode.set('');
+    const otpInput = document.querySelector('.code-input') as HTMLInputElement | null;
+    if (otpInput) {
+      otpInput.value = '';
     }
 
     this.isSubmitting.set(true);
@@ -105,12 +133,20 @@ export class MobileOtpConfirmation {
           if (response.registrationToken) {
             sessionStorage.setItem('registrationToken', response.registrationToken);
           }
+          sessionStorage.setItem('registrationStep', 'mobile');
           this.verificationCode.set('');
-          this.statusMessage.set(response.message);
+          if (otpInput) {
+            otpInput.value = '';
+          }
+          this.statusMessage.set(response.message ?? 'A new mobile verification code has been sent.');
           this.isSubmitting.set(false);
         },
         error: (error: HttpErrorResponse) => {
           const response = error.error as VerificationErrorResponse;
+          if (error.status === 401 || error.status === 410) {
+            sessionStorage.removeItem('registrationToken');
+            this.showRecoveryForm.set(true);
+          }
           this.statusMessage.set(
             response?.error ?? 'Could not resend the mobile verification code.',
           );
@@ -119,9 +155,37 @@ export class MobileOtpConfirmation {
       });
   }
 
-  continueToCongratulations(): void {
-    void this.router.navigateByUrl('/account-verified', {
-      state: { username: sessionStorage.getItem('registrationUserName') },
+  resumeRegistration(event: SubmitEvent): void {
+    event.preventDefault();
+    const email = this.recoveryEmail().trim().toLowerCase();
+    if (!email) {
+      this.statusMessage.set('Enter the email address used to register.');
+      return;
+    }
+
+    this.isSubmitting.set(true);
+    this.api.resumeRegistration(email).subscribe({
+      next: (response) => {
+        sessionStorage.setItem('registrationToken', response.registrationToken);
+        sessionStorage.setItem('registrationStep', response.step);
+        sessionStorage.setItem('registrationEmail', email);
+        if (response.step === 'email') {
+          void this.router.navigateByUrl('/email-otp-confirmation');
+          return;
+        }
+
+        this.showRecoveryForm.set(false);
+        this.statusMessage.set(response.message);
+        this.isSubmitting.set(false);
+      },
+      error: (error: HttpErrorResponse) => {
+        const response = error.error as VerificationErrorResponse;
+        this.statusMessage.set(
+          response?.error ?? 'Could not resume this registration. Please try again.',
+        );
+        this.isSubmitting.set(false);
+      },
     });
   }
+
 }

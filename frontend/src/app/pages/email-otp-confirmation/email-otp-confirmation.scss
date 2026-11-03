@@ -106,27 +106,22 @@ h1 {
   background: #fff;
   box-shadow: 0 8px 14px rgb(38 32 40 / 17%);
   color: #431451;
+  padding: 0;
+  text-align: center;
+  font-family: inherit;
   font-size: 30px;
   font-weight: 600;
+  outline: none;
 }
 
-.code-slot.is-active {
+.code-slot:focus {
   border: 4px solid #ff7908;
 }
 
-.code-entry:focus-within .code-slot.is-active {
+.code-entry:focus-within .code-slot:focus {
   box-shadow:
     0 0 0 3px rgb(255 121 8 / 17%),
     0 8px 14px rgb(38 32 40 / 17%);
-}
-
-.code-input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  cursor: text;
-  opacity: 0;
 }
 
 .verify-button {
@@ -172,6 +167,44 @@ h1 {
   font-size: 17px;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.recovery-description {
+  margin: 24px 0 0;
+  color: #626262;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.recovery-form {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 16px;
+  text-align: left;
+}
+
+.recovery-form label {
+  color: #431451;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.recovery-form input {
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border: 1px solid #d8d0db;
+  border-radius: 10px;
+  color: #29222c;
+  font: inherit;
+}
+
+.recovery-button {
+  margin-top: 8px;
+  font-size: 17px;
 }
 
 .status-message {

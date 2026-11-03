@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Api, RegistrationResponse } from '../../services/api';
@@ -14,13 +14,24 @@ interface RegisterErrorResponse {
   styleUrl: './register.scss',
   templateUrl: './register.html',
 })
-export class Register {
+export class Register implements OnInit {
   private readonly api = inject(Api);
   private readonly formBuilder = inject(FormBuilder);
   private readonly router = inject(Router);
 
   readonly isSubmitting = signal(false);
   readonly apiError = signal('');
+
+  ngOnInit(): void {
+    const registrationToken = sessionStorage.getItem('registrationToken');
+    if (!registrationToken) {
+      return;
+    }
+
+    const registrationStep = sessionStorage.getItem('registrationStep') ?? 'email';
+    const route = registrationStep === 'mobile' ? '/mobile-otp-confirmation' : '/email-otp-confirmation';
+    void this.router.navigateByUrl(route);
+  }
 
   readonly registrationForm = this.formBuilder.nonNullable.group(
     {
@@ -73,6 +84,8 @@ export class Register {
           }
 
           sessionStorage.setItem('registrationToken', response.registrationToken);
+          sessionStorage.setItem('registrationStep', 'email');
+          sessionStorage.setItem('registrationEmail', email.trim().toLowerCase());
           void this.router.navigateByUrl('/email-otp-confirmation');
         },
         error: (error: HttpErrorResponse) => {
@@ -82,6 +95,18 @@ export class Register {
             );
           } else {
             const response = error.error as RegisterErrorResponse;
+            const isPendingRegistration =
+              (response?.error ?? '').includes('A registration is already in progress');
+
+            if (isPendingRegistration) {
+              sessionStorage.removeItem('registrationToken');
+              sessionStorage.removeItem('registrationStep');
+              sessionStorage.setItem('registrationEmail', email.trim().toLowerCase());
+              void this.router.navigateByUrl('/email-otp-confirmation');
+              this.isSubmitting.set(false);
+              return;
+            }
+
             this.apiError.set(response?.error ?? 'Registration failed. Please try again.');
           }
 

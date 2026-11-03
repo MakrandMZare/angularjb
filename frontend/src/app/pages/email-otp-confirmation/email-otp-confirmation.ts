@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Api } from '../../services/api';
 
@@ -14,7 +14,7 @@ interface VerificationErrorResponse {
   templateUrl: './email-otp-confirmation.html',
   styleUrl: './email-otp-confirmation.scss',
 })
-export class EmailOtpConfirmation {
+export class EmailOtpConfirmation implements OnInit {
   private readonly api = inject(Api);
   private readonly router = inject(Router);
 
@@ -22,30 +22,107 @@ export class EmailOtpConfirmation {
   readonly verificationCode = signal('');
   readonly statusMessage = signal('');
   readonly isSubmitting = signal(false);
-  readonly isEmailVerified = signal(false);
+  readonly showRecoveryForm = signal(!sessionStorage.getItem('registrationToken'));
+  readonly recoveryEmail = signal(sessionStorage.getItem('registrationEmail') ?? '');
+  readonly isResendPage = signal(false);
 
-  onCodeInput(event: Event): void {
+  ngOnInit(): void {
+    this.isResendPage.set(this.router.url === '/email-otp-resend');
+    const shouldResend = this.router.getCurrentNavigation?.()?.extras.state?.['requestEmailOtpResend'];
+
+    if (shouldResend && sessionStorage.getItem('registrationToken')) {
+      this.resendCode();
+    } else if (!sessionStorage.getItem('registrationToken') && this.recoveryEmail()) {
+      this.resumeRegistration();
+    }
+  }
+
+  openResendPage(): void {
+    void this.router.navigateByUrl('/email-otp-resend', {
+      state: { requestEmailOtpResend: true },
+    });
+  }
+
+  onCodeSlotInput(event: Event, slot: number): void {
     const input = event.target;
     if (!(input instanceof HTMLInputElement)) {
       return;
     }
 
-    const code = input.value.replace(/\D/g, '').slice(0, 6);
-    input.value = code;
-    this.verificationCode.set(code);
+    const digit = input.value.replace(/\D/g, '').slice(-1);
+    input.value = digit;
+    const digits = this.verificationCode().split('');
+    digits[slot] = digit;
+    this.verificationCode.set(digits.join('').slice(0, 6));
     this.statusMessage.set('');
+
+    if (digit) {
+      input.parentElement?.querySelectorAll<HTMLInputElement>('.code-input')[slot + 1]?.focus();
+    }
+  }
+
+  onCodeSlotKeydown(event: KeyboardEvent, slot: number): void {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const inputs = input.parentElement?.querySelectorAll<HTMLInputElement>('.code-input');
+    if (event.key === 'Backspace' && !input.value && slot > 0) {
+      inputs?.[slot - 1]?.focus();
+    } else if (event.key === 'ArrowLeft' && slot > 0) {
+      event.preventDefault();
+      inputs?.[slot - 1]?.focus();
+    } else if (event.key === 'ArrowRight' && slot < this.codeSlots.length - 1) {
+      event.preventDefault();
+      inputs?.[slot + 1]?.focus();
+    }
+  }
+
+  onCodePaste(event: ClipboardEvent, slot: number): void {
+    const input = event.currentTarget;
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const pastedCode = event.clipboardData?.getData('text').replace(/\D/g, '');
+    if (!pastedCode) {
+      return;
+    }
+
+    event.preventDefault();
+    const digits = this.verificationCode().split('');
+    const code = pastedCode.slice(0, this.codeSlots.length - slot);
+    for (let index = 0; index < code.length; index += 1) {
+      digits[slot + index] = code[index];
+    }
+    this.verificationCode.set(digits.join('').slice(0, 6));
+    this.statusMessage.set('');
+
+    const nextSlot = Math.min(slot + code.length, this.codeSlots.length - 1);
+    input.parentElement?.querySelectorAll<HTMLInputElement>('.code-input')[nextSlot]?.focus();
+  }
+
+  onRecoveryEmailInput(event: Event): void {
+    const input = event.target;
+    if (input instanceof HTMLInputElement) {
+      this.recoveryEmail.set(input.value);
+    }
   }
 
   verifyCode(event: SubmitEvent): void {
     event.preventDefault();
-    if (this.verificationCode().length !== 6) {
+    if (!/^\d{6}$/.test(this.verificationCode())) {
       this.statusMessage.set('Enter all 6 digits to verify your email.');
       return;
     }
 
     const registrationToken = sessionStorage.getItem('registrationToken');
     if (!registrationToken) {
-      this.statusMessage.set('Your registration session expired. Please register again.');
+      this.showRecoveryForm.set(true);
+      this.statusMessage.set(
+        'Enter your registered email below to continue the existing registration.',
+      );
       return;
     }
 
@@ -61,20 +138,29 @@ export class EmailOtpConfirmation {
           }
 
           sessionStorage.setItem('registrationToken', response.registrationToken);
-          this.isEmailVerified.set(true);
-          this.statusMessage.set('Your email has been verified successfully.');
-          this.isSubmitting.set(false);
+          sessionStorage.setItem('registrationStep', 'mobile');
+          void this.router.navigateByUrl('/mobile-otp-confirmation', {
+            state: {
+              statusMessage:
+                'Your email is verified. Enter the code sent to your mobile number.',
+            },
+          });
         },
         error: (error: HttpErrorResponse) => {
           const response = error.error as VerificationErrorResponse;
           if (response?.registrationToken && response.emailVerified) {
             sessionStorage.setItem('registrationToken', response.registrationToken);
+            sessionStorage.setItem('registrationStep', 'mobile');
             void this.router.navigateByUrl('/mobile-otp-confirmation', {
               state: { deliveryError: response.error },
             });
             return;
           }
 
+          if (error.status === 401 || error.status === 410) {
+            sessionStorage.removeItem('registrationToken');
+            this.showRecoveryForm.set(true);
+          }
           this.statusMessage.set(
             response?.error ?? 'Email verification failed. Please try again.',
           );
@@ -86,9 +172,14 @@ export class EmailOtpConfirmation {
   resendCode(): void {
     const registrationToken = sessionStorage.getItem('registrationToken');
     if (!registrationToken) {
-      this.statusMessage.set('Your registration session expired. Please register again.');
+      this.showRecoveryForm.set(true);
+      this.statusMessage.set(
+        'Enter your registered email below to continue the existing registration.',
+      );
       return;
     }
+
+    this.verificationCode.set('');
 
     this.isSubmitting.set(true);
     this.api
@@ -102,12 +193,17 @@ export class EmailOtpConfirmation {
           }
 
           sessionStorage.setItem('registrationToken', response.registrationToken);
+          sessionStorage.setItem('registrationStep', 'email');
           this.verificationCode.set('');
-          this.statusMessage.set(response.message);
+          this.statusMessage.set(response.message ?? 'A new verification code has been sent.');
           this.isSubmitting.set(false);
         },
         error: (error: HttpErrorResponse) => {
           const response = error.error as VerificationErrorResponse;
+          if (error.status === 401 || error.status === 410) {
+            sessionStorage.removeItem('registrationToken');
+            this.showRecoveryForm.set(true);
+          }
           this.statusMessage.set(
             response?.error ?? 'Could not resend the email verification code.',
           );
@@ -116,7 +212,37 @@ export class EmailOtpConfirmation {
       });
   }
 
-  continueToMobileVerification(): void {
-    void this.router.navigateByUrl('/mobile-otp-confirmation');
+  resumeRegistration(event?: SubmitEvent): void {
+    event?.preventDefault();
+    const email = this.recoveryEmail().trim().toLowerCase();
+    if (!email) {
+      this.statusMessage.set('Enter the email address used to register.');
+      return;
+    }
+
+    this.isSubmitting.set(true);
+    this.api.resumeRegistration(email).subscribe({
+      next: (response) => {
+        sessionStorage.setItem('registrationToken', response.registrationToken);
+        sessionStorage.setItem('registrationStep', response.step);
+        sessionStorage.setItem('registrationEmail', email);
+        if (response.step === 'mobile') {
+          void this.router.navigateByUrl('/mobile-otp-confirmation');
+          return;
+        }
+
+        this.showRecoveryForm.set(false);
+        this.statusMessage.set(response.message);
+        this.isSubmitting.set(false);
+      },
+      error: (error: HttpErrorResponse) => {
+        const response = error.error as VerificationErrorResponse;
+        this.statusMessage.set(
+          response?.error ?? 'Could not resume this registration. Please try again.',
+        );
+        this.isSubmitting.set(false);
+      },
+    });
   }
+
 }
