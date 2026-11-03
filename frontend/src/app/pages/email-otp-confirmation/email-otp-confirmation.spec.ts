@@ -50,6 +50,10 @@ describe('EmailOtpConfirmation', () => {
     expect(fixture.nativeElement.textContent).toContain(
       'Enter the 6-digit code we sent to your email address',
     );
+    expect(fixture.nativeElement.querySelector('.verify-button[type="submit"]').textContent)
+      .toContain('Verify email & continue');
+    expect(fixture.nativeElement.querySelector('.resend-action[type="button"]').textContent)
+      .toContain('Didn’t receive the code? Resend code');
     const inputs = fixture.nativeElement.querySelectorAll('.code-input') as NodeListOf<HTMLInputElement>;
     expect(inputs.length).toBe(6);
 

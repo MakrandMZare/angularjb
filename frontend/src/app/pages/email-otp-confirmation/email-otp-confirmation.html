@@ -37,7 +37,7 @@
       </div>
 
       <button class="verify-button" type="submit" [disabled]="isSubmitting()">
-        {{ isSubmitting() ? 'Verifying…' : 'Verify email' }}
+        {{ isSubmitting() ? 'Verifying…' : 'Verify email & continue' }}
       </button>
     </form>
 
@@ -47,7 +47,7 @@
       [disabled]="isSubmitting()"
       (click)="isResendPage() ? resendCode() : openResendPage()"
     >
-      Resend code
+      Didn’t receive the code? Resend code
     </button>
 
     @if (showRecoveryForm()) {
