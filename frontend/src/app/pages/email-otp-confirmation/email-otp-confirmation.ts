@@ -139,11 +139,9 @@ export class EmailOtpConfirmation implements OnInit {
 
           sessionStorage.setItem('registrationToken', response.registrationToken);
           sessionStorage.setItem('registrationStep', 'mobile');
-          void this.router.navigateByUrl('/mobile-otp-confirmation', {
-            state: {
-              statusMessage:
-                'Your email is verified. Enter the code sent to your mobile number.',
-            },
+          this.navigateToMobileOtp({
+            statusMessage:
+              'Your email is verified. Enter the code sent to your mobile number.',
           });
         },
         error: (error: HttpErrorResponse) => {
@@ -151,9 +149,7 @@ export class EmailOtpConfirmation implements OnInit {
           if (response?.registrationToken && response.emailVerified) {
             sessionStorage.setItem('registrationToken', response.registrationToken);
             sessionStorage.setItem('registrationStep', 'mobile');
-            void this.router.navigateByUrl('/mobile-otp-confirmation', {
-              state: { deliveryError: response.error },
-            });
+            this.navigateToMobileOtp({ deliveryError: response.error });
             return;
           }
 
@@ -167,6 +163,25 @@ export class EmailOtpConfirmation implements OnInit {
           this.isSubmitting.set(false);
         },
       });
+  }
+
+  private navigateToMobileOtp(state: Record<string, string | undefined>): void {
+    void this.router.navigateByUrl('/mobile-otp-confirmation', { state }).then(
+      (navigated) => {
+        if (!navigated) {
+          this.statusMessage.set(
+            'Email verified, but mobile verification could not be opened. Please try again.',
+          );
+          this.isSubmitting.set(false);
+        }
+      },
+      () => {
+        this.statusMessage.set(
+          'Email verified, but mobile verification could not be opened. Please try again.',
+        );
+        this.isSubmitting.set(false);
+      },
+    );
   }
 
   resendCode(): void {

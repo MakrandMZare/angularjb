@@ -407,12 +407,20 @@ router.post('/register/verify-email', async (req, res) => {
   try {
     const pool = require('../db');
     const pending = await findPendingRegistration(pool, claims.sub);
-    if (!pending || isExpired(pending.expires_at) || isExpired(pending.email_otp_expires_at)) {
+    if (!pending || isExpired(pending.expires_at)) {
       return res.status(410).json({ error: 'This email verification code has expired' });
     }
 
     if (pending.email_verified) {
-      return res.status(409).json({ error: 'This email address is already verified' });
+      return res.json({
+        message: 'Email is already verified. Continue mobile verification.',
+        registrationToken: createRegistrationToken(claims.sub, 'mobile'),
+        emailVerified: true
+      });
+    }
+
+    if (isExpired(pending.email_otp_expires_at)) {
+      return res.status(410).json({ error: 'This email verification code has expired' });
     }
 
     if (Number(pending.email_otp_attempts) >= MAX_OTP_ATTEMPTS) {

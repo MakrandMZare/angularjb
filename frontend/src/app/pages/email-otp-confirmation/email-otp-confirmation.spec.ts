@@ -13,7 +13,7 @@ describe('EmailOtpConfirmation', () => {
 
   beforeEach(async () => {
     sessionStorage.setItem('registrationToken', 'email-registration-token');
-    navigateByUrl = vi.fn();
+    navigateByUrl = vi.fn().mockResolvedValue(true);
     routerUrl = '/email-otp-confirmation';
     navigationState = null;
     await TestBed.configureTestingModule({
@@ -154,6 +154,50 @@ describe('EmailOtpConfirmation', () => {
           'Your email is verified. Enter the code sent to your mobile number.',
       },
     });
+  });
+
+  it('continues to mobile verification when email was already verified in a prior attempt', () => {
+    const component = fixture.componentInstance;
+    component.verificationCode.set('123456');
+
+    component.verifyCode(new Event('submit') as SubmitEvent);
+
+    httpTestingController
+      .expectOne('http://localhost:3000/api/auth/register/verify-email')
+      .flush({
+        message: 'Email is already verified. Continue mobile verification.',
+        registrationToken: 'mobile-registration-token',
+        emailVerified: true,
+      });
+
+    expect(sessionStorage.getItem('registrationToken')).toBe('mobile-registration-token');
+    expect(navigateByUrl).toHaveBeenCalledWith('/mobile-otp-confirmation', {
+      state: {
+        statusMessage:
+          'Your email is verified. Enter the code sent to your mobile number.',
+      },
+    });
+  });
+
+  it('shows an error when the mobile verification route cannot be opened', async () => {
+    navigateByUrl.mockResolvedValue(false);
+    const component = fixture.componentInstance;
+    component.verificationCode.set('123456');
+
+    component.verifyCode(new Event('submit') as SubmitEvent);
+
+    httpTestingController
+      .expectOne('http://localhost:3000/api/auth/register/verify-email')
+      .flush({
+        message: 'Email verified successfully.',
+        registrationToken: 'mobile-registration-token',
+      });
+    await fixture.whenStable();
+
+    expect(component.statusMessage()).toContain(
+      'Email verified, but mobile verification could not be opened.',
+    );
+    expect(component.isSubmitting()).toBe(false);
   });
 
   it('does not navigate when the server omits the mobile registration token', () => {
