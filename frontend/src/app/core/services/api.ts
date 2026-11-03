@@ -11,6 +11,9 @@ export interface ApiUser {
   email?: string;
   mobile?: string;
   role?: string;
+  date_of_birth?: string | null;
+  gender?: string | null;
+  profile_image_path?: string | null;
   created_at?: string;
 }
 
@@ -102,6 +105,14 @@ export class Api {
 
   getCurrentUser(): Observable<UserResponse> {
     return this.http.get<UserResponse>(`${API_BASE_URL}/users/me`);
+  }
+
+  updateCurrentUserProfile(details: FormData): Observable<UserResponse> {
+    return this.http.put<UserResponse>(`${API_BASE_URL}/users/me`, details);
+  }
+
+  getCurrentUserPhoto(): Observable<Blob> {
+    return this.http.get(`${API_BASE_URL}/users/me/photo`, { responseType: 'blob' });
   }
 
   getAdminUsers(): Observable<AdminUsersResponse> {

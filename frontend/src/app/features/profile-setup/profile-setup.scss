@@ -1,0 +1,257 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.profile-setup-screen {
+  position: relative;
+  display: flex;
+  min-height: 100dvh;
+  justify-content: center;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: #fff;
+  color: #431451;
+  padding: clamp(32px, 8vh, 68px) 24px 40px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.decoration {
+  position: absolute;
+  top: -22px;
+  width: 72px;
+  height: 80px;
+  border-radius: 50%;
+  background: #eee6f0;
+}
+
+.decoration-left {
+  left: -22px;
+}
+
+.decoration-right {
+  right: -22px;
+}
+
+.profile-setup-content {
+  z-index: 1;
+  width: min(100%, 400px);
+}
+
+.brand-mark {
+  display: block;
+  width: 86px;
+  height: 86px;
+  margin: 0 auto 16px;
+}
+
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #8d5a96;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-align: center;
+}
+
+h1 {
+  margin: 8px 0 0;
+  color: #431451;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.intro {
+  margin: 8px auto 24px;
+  color: #68636d;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.profile-form {
+  display: grid;
+  gap: 14px;
+}
+
+.account-summary {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #eee8f0;
+  border-radius: 14px;
+  background: #fcfafd;
+  padding: 13px 15px;
+}
+
+.account-summary strong {
+  color: #32133b;
+  font-size: 16px;
+}
+
+.account-summary span {
+  color: #77717b;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.photo-field {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #eee8f0;
+  border-radius: 14px;
+  padding: 13px;
+}
+
+.photo-preview {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  flex: 0 0 68px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #f5edf7;
+  color: #5a2870;
+}
+
+.photo-preview mat-icon {
+  width: 40px;
+  height: 40px;
+  font-size: 40px;
+}
+
+.photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-copy {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.photo-copy label,
+.form-field > span {
+  color: #332b36;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.photo-copy span {
+  color: #77717b;
+  font-size: 12px;
+}
+
+.photo-copy input {
+  max-width: 100%;
+  color: #5c5361;
+  font: inherit;
+  font-size: 12px;
+}
+
+.form-field {
+  display: grid;
+  gap: 7px;
+}
+
+.form-field input,
+.form-field select {
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+  border: 1px solid #ded7e1;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0 12px;
+  color: #332b36;
+  font: inherit;
+}
+
+.form-field input:focus,
+.form-field select:focus {
+  border-color: #8a5a9a;
+  outline: 3px solid rgb(138 90 154 / 18%);
+}
+
+.field-error {
+  margin: -8px 0 0;
+  color: #b42318;
+  font-size: 12px;
+}
+
+.form-message {
+  margin: 0;
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.error-message {
+  background: #fff0ef;
+  color: #a32118;
+}
+
+.success-message {
+  background: #edf8ef;
+  color: #216e35;
+}
+
+.primary-action {
+  display: flex;
+  width: 100%;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(100deg, #ff7912, #ff7412);
+  box-shadow: 0 4px 7px rgb(75 44 24 / 20%);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primary-action:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.secondary-action {
+  justify-self: center;
+  color: #431451;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.primary-action:focus-visible,
+.secondary-action:focus-visible,
+.brand-mark:focus-visible {
+  outline: 3px solid #8a5a9a;
+  outline-offset: 4px;
+}
+
+@media (max-height: 680px) {
+  .profile-setup-screen {
+    padding-top: 24px;
+  }
+
+  .brand-mark {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 10px;
+  }
+}

@@ -6,9 +6,7 @@
     [routerLinkActiveOptions]="{ exact: true }"
     aria-label="Home"
   >
-    <svg viewBox="0 0 28 28" aria-hidden="true">
-      <path d="m3 12 11-9 11 9v12h-8v-8h-6v8H3z" />
-    </svg>
+    <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">home</mat-icon>
     <span>Home</span>
   </a>
   <a
@@ -17,12 +15,7 @@
     routerLinkActive="is-active"
     [routerLinkActiveOptions]="{ exact: true }"
   >
-    <svg viewBox="0 0 28 28" aria-hidden="true">
-      <path d="M4 6h20M4 14h20M4 22h20" />
-      <circle cx="10" cy="6" r="2.5" />
-      <circle cx="18" cy="14" r="2.5" />
-      <circle cx="11" cy="22" r="2.5" />
-    </svg>
+    <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">grid_view</mat-icon>
     <span>Services</span>
   </a>
   <a
@@ -32,16 +25,11 @@
     [routerLinkActiveOptions]="{ exact: true }"
     aria-label="My Profile"
   >
-    <svg viewBox="0 0 28 28" aria-hidden="true">
-      <circle cx="14" cy="8" r="5" />
-      <path d="M4 25c0-6 4-9 10-9s10 3 10 9z" />
-    </svg>
+    <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">account_circle</mat-icon>
     <span>My Profile</span>
   </a>
   <button class="nav-item" type="button" (click)="notificationRequested.emit()">
-    <svg viewBox="0 0 28 28" aria-hidden="true">
-      <path d="M5 21h18l-2-3v-6a7 7 0 0 0-14 0v6zM11 24a3 3 0 0 0 6 0" />
-    </svg>
+    <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">notifications</mat-icon>
     <span>Notifications</span>
   </button>
 </nav>

@@ -6,6 +6,7 @@ describe('LoggedInServices', () => {
   let fixture: ComponentFixture<LoggedInServices>;
 
   beforeEach(async () => {
+    sessionStorage.setItem('registrationUserName', 'Makrand');
     await TestBed.configureTestingModule({
       imports: [LoggedInServices],
       providers: [provideRouter([])],
@@ -15,10 +16,22 @@ describe('LoggedInServices', () => {
     await fixture.whenStable();
   });
 
+  afterEach(() => {
+    sessionStorage.clear();
+  });
+
   it('greets the new user and renders all service categories', () => {
-    expect(fixture.nativeElement.textContent).toContain('Welcome,New User');
+    expect(fixture.nativeElement.textContent).toContain('Welcome,Makrand');
     expect(fixture.nativeElement.textContent).toContain('Explore Services');
+    const logo = fixture.nativeElement.querySelector('.logo-frame img') as HTMLImageElement;
+    expect(logo.getAttribute('src')).toBe('/assets/logo/jb_logo_1.png');
+    expect(logo.getAttribute('alt')).toBe('J shopping cart logo');
     expect(fixture.nativeElement.querySelectorAll('.service-item').length).toBe(9);
+    expect(fixture.nativeElement.querySelectorAll('.service-art mat-icon').length).toBe(9);
+  });
+
+  it('shows the signed-in user first initial in the avatar', () => {
+    expect(fixture.nativeElement.querySelector('.user-avatar').textContent.trim()).toBe('M');
   });
 
   it('announces when a service is not available yet', () => {

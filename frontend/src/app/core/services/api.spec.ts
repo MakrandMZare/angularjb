@@ -124,6 +124,28 @@ describe('Api', () => {
     request.flush({ user: { username: 'jan' } });
   });
 
+  it('updates the current user profile with multipart form data', () => {
+    const formData = new FormData();
+    formData.append('dateOfBirth', '1990-01-02');
+    formData.append('gender', 'prefer-not-to-say');
+
+    service.updateCurrentUserProfile(formData).subscribe();
+
+    const request = httpTesting.expectOne(`${API_BASE_URL}/users/me`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toBe(formData);
+    request.flush({ user: { username: 'jan', gender: 'prefer-not-to-say' } });
+  });
+
+  it('downloads the authenticated user profile photo', () => {
+    service.getCurrentUserPhoto().subscribe();
+
+    const request = httpTesting.expectOne(`${API_BASE_URL}/users/me/photo`);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.responseType).toBe('blob');
+    request.flush(new Blob(['image']));
+  });
+
   it('requests the admin user list', () => {
     service.getAdminUsers().subscribe();
 

@@ -46,6 +46,22 @@ button:focus-visible {
   outline-offset: 3px;
 }
 
+.edit-profile-link {
+  display: inline-flex;
+  margin: 0 0 1.25rem;
+  border-radius: 999px;
+  background: #ff7912;
+  color: #fff;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.edit-profile-link:focus-visible {
+  outline: 3px solid #8a5a9a;
+  outline-offset: 3px;
+}
+
 @media (min-width: 700px) {
   .user-dashboard {
     padding-bottom: 1.5rem;

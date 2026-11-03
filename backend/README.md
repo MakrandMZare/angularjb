@@ -10,6 +10,7 @@ Create a MySQL database and set `DATABASE_URL` to point to it. Apply migrations 
 
 1. `migrations/000_users.sql` creates the user-registration table with unique username, email, and mobile fields and a default `user` role.
 2. `migrations/001_pending_registrations.sql` creates temporary registration and OTP state.
+3. `migrations/002_user_profile.sql` adds the date of birth, gender, and profile-photo path columns.
 
 The API issues an access JWT after successful login and after email verification creates the account. The frontend stores that access token as `jwt_token` in `localStorage`. To call a protected endpoint, include the token in the HTTP `Authorization` header. Replace `<token>` with the actual token value; do not include the angle brackets:
 
@@ -18,6 +19,8 @@ Authorization: Bearer eyJhbGciOi...
 ```
 
 - `GET /api/users/me` returns the authenticated user's profile.
+- `PUT /api/users/me` updates the authenticated user's date of birth and gender. Send a `multipart/form-data` request with `dateOfBirth`, `gender`, and an optional `photo` (JPEG, PNG, or WebP, up to 3 MB).
+- `GET /api/users/me/photo` streams the authenticated user's stored profile photo. Uploaded files are saved under `backend/uploads/profile-photos`; back up this directory with the database.
 - `GET /api/admin/users` requires an access token with the `admin` role.
 
 Registration verification JWTs are short-lived and cannot authorize protected API requests. Use a long, random `JWT_SECRET`; access tokens use HS256, carry an issuer and audience, and expire according to `JWT_EXPIRES_IN`.

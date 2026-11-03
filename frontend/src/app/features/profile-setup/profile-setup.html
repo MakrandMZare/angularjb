@@ -1,1 +1,100 @@
-<p>profile-setup works!</p>
+<main class="profile-setup-screen">
+  <span class="decoration decoration-left" aria-hidden="true"></span>
+  <span class="decoration decoration-right" aria-hidden="true"></span>
+
+  <section class="profile-setup-content" aria-labelledby="profile-setup-title">
+    <a class="brand-mark" routerLink="/" aria-label="JanBazar home">
+      <img src="/assets/logo/jb_logo_1.png" alt="JanBazar" />
+    </a>
+
+    <p class="eyebrow">PERSONALIZE YOUR ACCOUNT</p>
+    <h1 id="profile-setup-title">Profile setup</h1>
+    <p class="intro">A few details help us make your JanBazar experience more personal.</p>
+
+    @if (isLoading()) {
+      <p class="form-message" role="status">Loading your profile…</p>
+    } @else if (errorMessage() && !user()) {
+      <p class="form-message error-message" role="alert">{{ errorMessage() }}</p>
+      <button class="primary-action" type="button" (click)="loadProfile()">Try again</button>
+    } @else if (user(); as profile) {
+      <form class="profile-form" [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate>
+        <div class="account-summary">
+          <strong>{{ profile.username }}</strong>
+          @if (profile.email) {
+            <span>{{ profile.email }}</span>
+          }
+          @if (profile.mobile) {
+            <span>{{ profile.mobile }}</span>
+          }
+        </div>
+
+        <div class="photo-field">
+          <div class="photo-preview" aria-hidden="true">
+            @if (photoPreview()) {
+              <img [src]="photoPreview()" alt="" />
+            } @else {
+              <mat-icon fontSet="material-symbols-outlined">account_circle</mat-icon>
+            }
+          </div>
+          <div class="photo-copy">
+            <label for="profile-photo">Profile photo</label>
+            <span>JPEG, PNG, or WebP · up to 3 MB</span>
+            <input
+              id="profile-photo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              (change)="selectPhoto($event)"
+            />
+          </div>
+        </div>
+        @if (photoError()) {
+          <p class="field-error" role="alert">{{ photoError() }}</p>
+        }
+
+        <label class="form-field" for="date-of-birth">
+          <span>Date of birth</span>
+          <input
+            id="date-of-birth"
+            type="date"
+            formControlName="dateOfBirth"
+            [max]="maxDate"
+            [attr.aria-invalid]="profileForm.controls.dateOfBirth.invalid && profileForm.controls.dateOfBirth.touched"
+          />
+        </label>
+        @if (profileForm.controls.dateOfBirth.touched && profileForm.controls.dateOfBirth.invalid) {
+          <p class="field-error">Enter your date of birth.</p>
+        }
+
+        <label class="form-field" for="gender">
+          <span>Gender</span>
+          <select
+            id="gender"
+            formControlName="gender"
+            [attr.aria-invalid]="profileForm.controls.gender.invalid && profileForm.controls.gender.touched"
+          >
+            <option value="" disabled>Select an option</option>
+            <option value="female">Female</option>
+            <option value="male">Male</option>
+            <option value="non-binary">Non-binary</option>
+            <option value="prefer-not-to-say">Prefer not to say</option>
+          </select>
+        </label>
+        @if (profileForm.controls.gender.touched && profileForm.controls.gender.invalid) {
+          <p class="field-error">Choose a gender option.</p>
+        }
+
+        @if (errorMessage()) {
+          <p class="form-message error-message" role="alert">{{ errorMessage() }}</p>
+        }
+        @if (successMessage()) {
+          <p class="form-message success-message" role="status">{{ successMessage() }}</p>
+        }
+
+        <button class="primary-action" type="submit" [disabled]="isSaving()">
+          {{ isSaving() ? 'Saving…' : 'Save profile' }}
+        </button>
+        <a class="secondary-action" routerLink="/logged-in-services">Continue to services</a>
+      </form>
+    }
+  </section>
+</main>

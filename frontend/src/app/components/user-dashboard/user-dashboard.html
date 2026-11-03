@@ -1,5 +1,6 @@
 <main class="user-dashboard" aria-labelledby="dashboard-title" [attr.aria-busy]="isLoading()">
   <h1 id="dashboard-title">Your profile</h1>
+  <a class="edit-profile-link" routerLink="/profile-setup">Set up your profile</a>
 
   @if (isLoading()) {
     <p role="status">Loading your profile…</p>

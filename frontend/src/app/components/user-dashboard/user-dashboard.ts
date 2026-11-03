@@ -1,10 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { BottomNav } from '../../shared/components/bottom-nav/bottom-nav';
 import { Api, ApiUser } from '../../services/api';
 
 @Component({
-  imports: [BottomNav],
+  imports: [BottomNav, RouterLink],
   selector: 'app-user-dashboard',
   styleUrl: './user-dashboard.scss',
   templateUrl: './user-dashboard.html',

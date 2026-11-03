@@ -35,14 +35,10 @@
   cursor: pointer;
 }
 
-.nav-item svg {
+.nav-item mat-icon {
   width: 25px;
-  height: 25px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2;
+  font-size: 23px;
+  line-height: 1;
 }
 
 .nav-item.is-active {

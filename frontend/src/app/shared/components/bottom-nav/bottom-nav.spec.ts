@@ -22,10 +22,15 @@ describe('BottomNav', () => {
     const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
 
     expect(fixture.componentInstance).toBeTruthy();
-    expect(links.map((link) => link.textContent?.trim())).toEqual([
+    expect(links.map((link) => link.querySelector('span')?.textContent?.trim())).toEqual([
       'Home',
       'Services',
       'My Profile',
+    ]);
+    expect(links.map((link) => link.querySelector('mat-icon')?.textContent?.trim())).toEqual([
+      'home',
+      'grid_view',
+      'account_circle',
     ]);
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/',

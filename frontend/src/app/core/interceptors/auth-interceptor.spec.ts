@@ -19,18 +19,38 @@ describe('authInterceptor', () => {
     localStorage.clear();
   });
 
-  it('adds the access token to profile and admin API requests', () => {
+  it('adds the access token to profile, profile-photo, and admin API requests', () => {
     localStorage.setItem('jwt_token', 'access-token');
     const http = TestBed.inject(HttpClient);
     http.get('http://localhost:3000/api/users/me').subscribe();
+    http.put('http://localhost:3000/api/users/me', new FormData()).subscribe();
+    http.get('http://localhost:3000/api/users/me/photo', { responseType: 'blob' }).subscribe();
     http.get('http://localhost:3000/api/admin/users').subscribe();
 
     const httpTesting = TestBed.inject(HttpTestingController);
-    const profileRequest = httpTesting.expectOne('http://localhost:3000/api/users/me');
+    const profileRequest = httpTesting.expectOne(
+      (request) =>
+        request.url === 'http://localhost:3000/api/users/me' && request.method === 'GET',
+    );
     expect(profileRequest.request.headers.get('Authorization')).toBe(
       `Bearer ${localStorage.getItem('jwt_token')}`,
     );
     profileRequest.flush({ user: { username: 'jan' } });
+
+    const updateRequest = httpTesting.expectOne(
+      (request) =>
+        request.url === 'http://localhost:3000/api/users/me' && request.method === 'PUT',
+    );
+    expect(updateRequest.request.headers.get('Authorization')).toBe(
+      profileRequest.request.headers.get('Authorization'),
+    );
+    updateRequest.flush({ user: { username: 'jan' } });
+
+    const photoRequest = httpTesting.expectOne('http://localhost:3000/api/users/me/photo');
+    expect(photoRequest.request.headers.get('Authorization')).toBe(
+      profileRequest.request.headers.get('Authorization'),
+    );
+    photoRequest.flush(new Blob(['photo']));
 
     const adminRequest = httpTesting.expectOne('http://localhost:3000/api/admin/users');
     expect(adminRequest.request.headers.get('Authorization')).toBe(
