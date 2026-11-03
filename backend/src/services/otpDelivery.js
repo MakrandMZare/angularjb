@@ -18,13 +18,23 @@ async function sendEmailOtp(email, username, otp) {
     }
   });
 
-  await transporter.sendMail({
+  const result = await transporter.sendMail({
     from: SMTP_FROM,
     to: email,
     subject: 'Verify your JanBazar email address',
     text: `Hello ${username},\n\nYour JanBazar email verification code is ${otp}. It expires in 10 minutes.\n\nIf you did not start this registration, you can ignore this email.`,
     html: `<p>Hello ${escapeHtml(username)},</p><p>Your JanBazar email verification code is <strong>${otp}</strong>.</p><p>This code expires in 10 minutes.</p><p>If you did not start this registration, you can ignore this email.</p>`
   });
+
+  const acceptedRecipients = result.accepted
+    .map((recipient) => typeof recipient === 'string' ? recipient : recipient.address)
+    .filter((recipient) => typeof recipient === 'string')
+    .map((recipient) => recipient.toLowerCase());
+  if (!acceptedRecipients.includes(email.toLowerCase())) {
+    throw new Error('SMTP server did not accept the verification email recipient');
+  }
+
+  return result;
 }
 
 async function sendMobileOtp(mobile, otp) {

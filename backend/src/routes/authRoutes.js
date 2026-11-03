@@ -108,6 +108,13 @@ function handleServerError(label, error, res) {
   return res.status(500).json({ error: `${label} failed` });
 }
 
+function logEmailOtpAccepted(result) {
+  console.info('Email OTP accepted by SMTP relay', {
+    messageId: result.messageId,
+    acceptedRecipientCount: result.accepted.length
+  });
+}
+
 function requireRegistrationClaims(req, res, step) {
   try {
     const claims = readRegistrationToken(req.body?.registrationToken, step);
@@ -212,7 +219,8 @@ router.post('/register', async (req, res) => {
     );
 
     try {
-      await sendEmailOtp(cleanEmail, cleanUsername, emailOtp);
+      const delivery = await sendEmailOtp(cleanEmail, cleanUsername, emailOtp);
+      logEmailOtpAccepted(delivery);
     } catch (error) {
       await pool.execute(
         'DELETE FROM pending_registrations WHERE registration_id = ?',
@@ -288,8 +296,8 @@ router.post('/register/resume', async (req, res) => {
 
       return res.json({
         message: step === 'email'
-          ? 'A code was sent recently. Check your email and enter it below.'
-          : 'A code was sent recently. Check your mobile and enter it below.',
+          ? 'An email code was requested recently. If it has not arrived, wait 60 seconds and select Resend code.'
+          : 'A mobile code was requested recently. If it has not arrived, wait 60 seconds and select Resend code.',
         registrationToken: createRegistrationToken(pending.registration_id, step),
         step
       });
@@ -314,7 +322,8 @@ router.post('/register/resume', async (req, res) => {
 
   try {
     if (step === 'email') {
-      await sendEmailOtp(pending.email, pending.username, otp);
+      const delivery = await sendEmailOtp(pending.email, pending.username, otp);
+      logEmailOtpAccepted(delivery);
     } else {
       await sendMobileOtp(pending.mobile, otp);
     }
@@ -372,7 +381,8 @@ router.post('/register/resend-email', async (req, res) => {
   }
 
   try {
-    await sendEmailOtp(pending.email, pending.username, emailOtp);
+    const delivery = await sendEmailOtp(pending.email, pending.username, emailOtp);
+    logEmailOtpAccepted(delivery);
     return res.json({
       message: 'A new verification code was sent to your email address.',
       registrationToken: createRegistrationToken(claims.sub, 'email')
