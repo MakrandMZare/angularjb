@@ -150,8 +150,7 @@ describe('EmailOtpConfirmation', () => {
     expect(sessionStorage.getItem('registrationStep')).toBe('mobile');
     expect(navigateByUrl).toHaveBeenCalledWith('/mobile-otp-confirmation', {
       state: {
-        statusMessage:
-          'Your email is verified. Enter the code sent to your mobile number.',
+        statusMessage: 'Email verified successfully.',
       },
     });
   });
@@ -165,7 +164,7 @@ describe('EmailOtpConfirmation', () => {
     httpTestingController
       .expectOne('http://localhost:3000/api/auth/register/verify-email')
       .flush({
-        message: 'Email is already verified. Continue mobile verification.',
+        message: 'Your mobile verification code was sent recently. Check your phone.',
         registrationToken: 'mobile-registration-token',
         emailVerified: true,
       });
@@ -173,8 +172,7 @@ describe('EmailOtpConfirmation', () => {
     expect(sessionStorage.getItem('registrationToken')).toBe('mobile-registration-token');
     expect(navigateByUrl).toHaveBeenCalledWith('/mobile-otp-confirmation', {
       state: {
-        statusMessage:
-          'Your email is verified. Enter the code sent to your mobile number.',
+        statusMessage: 'Your mobile verification code was sent recently. Check your phone.',
       },
     });
   });

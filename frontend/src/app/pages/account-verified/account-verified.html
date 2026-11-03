@@ -8,14 +8,14 @@
       </svg>
     </div>
 
-    <h1 id="verified-title">Congratulations, {{ username() }}!</h1>
+    <h1 id="verified-title">Welcome, {{ username() }}!</h1>
     <p class="verified-description">
       Your email and mobile number are verified successfully. Your JanBazar account has been
       created for {{ username() }}.
     </p>
 
-    <button class="create-account-button" type="button" (click)="continueToServices()">
-      Continue
+    <button class="create-account-button" type="button" (click)="goToHome()">
+      Go to Home
     </button>
   </section>
 </main>

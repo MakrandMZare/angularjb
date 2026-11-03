@@ -412,9 +412,54 @@ router.post('/register/verify-email', async (req, res) => {
     }
 
     if (pending.email_verified) {
+      if (pending.mobile_verified) {
+        return res.status(409).json({ error: 'This mobile number is already verified' });
+      }
+
+      const registrationToken = createRegistrationToken(claims.sub, 'mobile');
+      if (pending.mobile_otp_hash && !isExpired(pending.mobile_otp_expires_at)) {
+        return res.json({
+          message: 'Your mobile verification code was sent recently. Check your phone.',
+          registrationToken,
+          emailVerified: true
+        });
+      }
+
+      const mobileOtp = createOtp();
+      const mobileOtpHash = await bcrypt.hash(mobileOtp, 10);
+      await pool.execute(
+        `UPDATE pending_registrations
+         SET mobile_otp_hash = ?,
+             mobile_otp_attempts = 0,
+             mobile_otp_expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${OTP_TTL_MINUTES} MINUTE),
+             mobile_last_sent_at = UTC_TIMESTAMP(),
+             expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${REGISTRATION_SESSION_TTL_HOURS} HOUR)
+         WHERE registration_id = ?`,
+        [mobileOtpHash, claims.sub]
+      );
+
+      try {
+        await sendMobileOtp(pending.mobile, mobileOtp);
+      } catch (error) {
+        await pool.execute(
+          `UPDATE pending_registrations
+           SET mobile_otp_hash = NULL,
+               mobile_otp_expires_at = NULL,
+               mobile_last_sent_at = NULL
+           WHERE registration_id = ?`,
+          [claims.sub]
+        );
+        console.error('Mobile OTP delivery failed:', error.message);
+        return res.status(502).json({
+          error: 'Your email is verified, but the mobile code could not be sent. Retry sending the mobile code.',
+          registrationToken,
+          emailVerified: true
+        });
+      }
+
       return res.json({
-        message: 'Email is already verified. Continue mobile verification.',
-        registrationToken: createRegistrationToken(claims.sub, 'mobile'),
+        message: 'Email is verified. A new code was sent to your mobile number.',
+        registrationToken,
         emailVerified: true
       });
     }
@@ -457,6 +502,14 @@ router.post('/register/verify-email', async (req, res) => {
     try {
       await sendMobileOtp(pending.mobile, mobileOtp);
     } catch (error) {
+      await pool.execute(
+        `UPDATE pending_registrations
+         SET mobile_otp_hash = NULL,
+             mobile_otp_expires_at = NULL,
+             mobile_last_sent_at = NULL
+         WHERE registration_id = ?`,
+        [claims.sub]
+      );
       console.error('Mobile OTP delivery failed:', error.message);
       return res.status(502).json({
         error: 'Your email is verified, but the mobile code could not be sent. Retry sending the mobile code.',
@@ -482,10 +535,11 @@ router.post('/register/resend-mobile', async (req, res) => {
   }
 
   let pending;
+  let pool;
   let mobileOtp;
   let mobileOtpHash;
   try {
-    const pool = require('../db');
+    pool = require('../db');
     pending = await findPendingRegistration(pool, claims.sub);
     if (
       !pending ||
@@ -496,7 +550,11 @@ router.post('/register/resend-mobile', async (req, res) => {
       return res.status(410).json({ error: 'This mobile verification session has expired' });
     }
 
-    if (Number(pending.mobile_seconds_since_sent) < 60) {
+    if (
+      pending.mobile_otp_hash &&
+      !isExpired(pending.mobile_otp_expires_at) &&
+      Number(pending.mobile_seconds_since_sent) < 60
+    ) {
       return res.status(429).json({ error: 'Wait a minute before requesting another code' });
     }
 
@@ -523,6 +581,14 @@ router.post('/register/resend-mobile', async (req, res) => {
       registrationToken: createRegistrationToken(claims.sub, 'mobile')
     });
   } catch (error) {
+    await pool.execute(
+      `UPDATE pending_registrations
+       SET mobile_otp_hash = NULL,
+           mobile_otp_expires_at = NULL,
+           mobile_last_sent_at = NULL
+       WHERE registration_id = ?`,
+      [claims.sub]
+    );
     console.error('Mobile OTP delivery failed:', error.message);
     return res.status(502).json({ error: 'Could not resend the mobile verification code' });
   }

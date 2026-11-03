@@ -30,8 +30,8 @@ describe('AccountVerified', () => {
     sessionStorage.clear();
   });
 
-  it('congratulates the registered user after account creation', () => {
-    expect(fixture.nativeElement.textContent).toContain('Congratulations, Makrand!');
+  it('welcomes the registered user after account creation', () => {
+    expect(fixture.nativeElement.textContent).toContain('Welcome, Makrand!');
     expect(fixture.nativeElement.textContent).toContain(
       'Your email and mobile number are verified successfully.',
     );
@@ -40,9 +40,9 @@ describe('AccountVerified', () => {
     );
   });
 
-  it('opens the services page when continuing', () => {
+  it('opens the home page when selected', () => {
     fixture.nativeElement.querySelector('.create-account-button').click();
 
-    expect(navigateByUrl).toHaveBeenCalledWith('/logged-in-services');
+    expect(navigateByUrl).toHaveBeenCalledWith('/');
   });
 });

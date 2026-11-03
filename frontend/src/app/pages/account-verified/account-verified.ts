@@ -24,7 +24,7 @@ export class AccountVerified {
     return 'there';
   }
 
-  continueToServices(): void {
-    void this.router.navigateByUrl('/logged-in-services');
+  goToHome(): void {
+    void this.router.navigateByUrl('/');
   }
 }

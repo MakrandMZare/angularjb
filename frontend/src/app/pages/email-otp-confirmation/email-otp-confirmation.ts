@@ -141,7 +141,7 @@ export class EmailOtpConfirmation implements OnInit {
           sessionStorage.setItem('registrationStep', 'mobile');
           this.navigateToMobileOtp({
             statusMessage:
-              'Your email is verified. Enter the code sent to your mobile number.',
+              response.message || 'Your email is verified. Enter the code sent to your mobile number.',
           });
         },
         error: (error: HttpErrorResponse) => {
