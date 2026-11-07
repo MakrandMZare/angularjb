@@ -15,15 +15,6 @@ export class EmailVerified {
   );
 
   continueToMobileVerification(): void {
-    if (sessionStorage.getItem('registrationStep') === 'complete') {
-      void this.router.navigateByUrl('/account-verified', {
-        state: {
-          username: sessionStorage.getItem('registrationUserName') || 'there',
-        },
-      });
-      return;
-    }
-
     void this.router.navigateByUrl('/mobile-otp-confirmation', {
       state: { statusMessage: this.statusMessage() },
     });

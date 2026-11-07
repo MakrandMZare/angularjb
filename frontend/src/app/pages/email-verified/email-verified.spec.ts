@@ -49,12 +49,12 @@ describe('EmailVerified', () => {
     });
   });
 
-  it('continues to the account welcome page if registration is already complete', () => {
+  it('routes to mobile verification even when the session has a stale completion step', () => {
     sessionStorage.setItem('registrationStep', 'complete');
     fixture.nativeElement.querySelector('.continue-button').click();
 
-    expect(navigateByUrl).toHaveBeenCalledWith('/account-verified', {
-      state: { username: 'Makrand' },
+    expect(navigateByUrl).toHaveBeenCalledWith('/mobile-otp-confirmation', {
+      state: { statusMessage: 'Email verified. A mobile verification code has been sent.' },
     });
   });
 });
