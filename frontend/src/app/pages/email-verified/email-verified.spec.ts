@@ -10,7 +10,7 @@ describe('EmailVerified', () => {
   beforeEach(async () => {
     sessionStorage.setItem('registrationUserName', 'Makrand');
     navigateByUrl = vi.fn();
-    navigationState = { username: 'Makrand' };
+    navigationState = { statusMessage: 'Email verified. A mobile verification code has been sent.' };
 
     await TestBed.configureTestingModule({
       imports: [EmailVerified],
@@ -34,14 +34,23 @@ describe('EmailVerified', () => {
     sessionStorage.clear();
   });
 
-  it('confirms email verification and welcomes the user by name', () => {
+  it('confirms email verification and explains the next mobile verification step', () => {
     expect(fixture.nativeElement.textContent).toContain('Email verified');
     expect(fixture.nativeElement.textContent).toContain(
-      'Makrand, your email address has been verified successfully',
+      'Email verified. A mobile verification code has been sent.',
     );
   });
 
-  it('continues to the account welcome page', () => {
+  it('continues to mobile OTP verification', () => {
+    fixture.nativeElement.querySelector('.continue-button').click();
+
+    expect(navigateByUrl).toHaveBeenCalledWith('/mobile-otp-confirmation', {
+      state: { statusMessage: 'Email verified. A mobile verification code has been sent.' },
+    });
+  });
+
+  it('continues to the account welcome page if registration is already complete', () => {
+    sessionStorage.setItem('registrationStep', 'complete');
     fixture.nativeElement.querySelector('.continue-button').click();
 
     expect(navigateByUrl).toHaveBeenCalledWith('/account-verified', {

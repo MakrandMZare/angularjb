@@ -73,8 +73,8 @@ export class Api {
     });
   }
 
-  verifyEmail(registrationToken: string, otp: string): Observable<AccountCreatedResponse> {
-    return this.http.post<AccountCreatedResponse>(`${AUTH_BASE_URL}/register/verify-email`, {
+  verifyEmail(registrationToken: string, otp: string): Observable<RegistrationResumeResponse> {
+    return this.http.post<RegistrationResumeResponse>(`${AUTH_BASE_URL}/register/verify-email`, {
       registrationToken,
       otp,
     });

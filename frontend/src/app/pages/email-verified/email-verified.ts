@@ -9,24 +9,23 @@ import { Router } from '@angular/router';
 export class EmailVerified {
   private readonly router = inject(Router);
 
-  readonly username = signal(this.getUsername());
+  readonly statusMessage = signal(
+    this.router.getCurrentNavigation()?.extras.state?.['statusMessage'] ??
+      'Your email address has been verified successfully.',
+  );
 
-  continueToWelcome(): void {
-    void this.router.navigateByUrl('/account-verified', {
-      state: { username: this.username() },
+  continueToMobileVerification(): void {
+    if (sessionStorage.getItem('registrationStep') === 'complete') {
+      void this.router.navigateByUrl('/account-verified', {
+        state: {
+          username: sessionStorage.getItem('registrationUserName') || 'there',
+        },
+      });
+      return;
+    }
+
+    void this.router.navigateByUrl('/mobile-otp-confirmation', {
+      state: { statusMessage: this.statusMessage() },
     });
-  }
-
-  private getUsername(): string {
-    const navigationUsername = this.router.getCurrentNavigation()?.extras.state?.['username'];
-    if (typeof navigationUsername === 'string' && navigationUsername.trim()) {
-      return navigationUsername;
-    }
-
-    if (typeof sessionStorage !== 'undefined') {
-      return sessionStorage.getItem('registrationUserName') || 'there';
-    }
-
-    return 'there';
   }
 }

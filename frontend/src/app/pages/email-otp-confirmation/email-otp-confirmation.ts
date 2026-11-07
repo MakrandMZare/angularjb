@@ -133,17 +133,24 @@ export class EmailOtpConfirmation implements OnInit {
       .verifyEmail(registrationToken, this.verificationCode())
       .subscribe({
         next: (response) => {
-          if (!response.token || !response.user) {
-            this.statusMessage.set('The server could not finish creating your account.');
-            this.isSubmitting.set(false);
+          if (response.registrationToken && response.step === 'mobile') {
+            sessionStorage.setItem('registrationToken', response.registrationToken);
+            sessionStorage.setItem('registrationStep', response.step);
+            void this.navigateToEmailVerifiedPage(response.message);
             return;
           }
 
-          this.auth.setAccessToken(response.token);
-          sessionStorage.setItem('registrationUserName', response.user.username);
-          sessionStorage.setItem('registrationStep', 'complete');
-          sessionStorage.removeItem('registrationToken');
-          void this.navigateToEmailVerifiedPage(response.user.username);
+          if (response.token && response.user) {
+            this.auth.setAccessToken(response.token);
+            sessionStorage.setItem('registrationUserName', response.user.username);
+            sessionStorage.setItem('registrationStep', 'complete');
+            sessionStorage.removeItem('registrationToken');
+            void this.navigateToEmailVerifiedPage(response.message);
+            return;
+          }
+
+          this.statusMessage.set('The server returned an unexpected email verification response.');
+          this.isSubmitting.set(false);
         },
         error: (error: HttpErrorResponse) => {
           const response = error.error as VerificationErrorResponse;
@@ -159,20 +166,39 @@ export class EmailOtpConfirmation implements OnInit {
       });
   }
 
-  private async navigateToEmailVerifiedPage(username: string): Promise<void> {
+  private async navigateToMobileOtpPage(message: string): Promise<void> {
     try {
-      const navigated = await this.router.navigateByUrl('/email-verified', {
-        state: { username },
+      const navigated = await this.router.navigateByUrl('/mobile-otp-confirmation', {
+        state: { statusMessage: message },
       });
       if (!navigated) {
         this.statusMessage.set(
-          'Your email was verified and your account was created, but the confirmation page could not be opened.',
+          'Your email was verified, but the mobile verification page could not be opened.',
         );
         this.isSubmitting.set(false);
       }
     } catch {
       this.statusMessage.set(
-        'Your email was verified and your account was created, but the confirmation page could not be opened.',
+        'Your email was verified, but the mobile verification page could not be opened.',
+      );
+      this.isSubmitting.set(false);
+    }
+  }
+
+  private async navigateToEmailVerifiedPage(message: string): Promise<void> {
+    try {
+      const navigated = await this.router.navigateByUrl('/email-verified', {
+        state: { statusMessage: message },
+      });
+      if (!navigated) {
+        this.statusMessage.set(
+          'Your email was verified, but the confirmation page could not be opened.',
+        );
+        this.isSubmitting.set(false);
+      }
+    } catch {
+      this.statusMessage.set(
+        'Your email was verified, but the confirmation page could not be opened.',
       );
       this.isSubmitting.set(false);
     }
@@ -237,7 +263,7 @@ export class EmailOtpConfirmation implements OnInit {
           sessionStorage.setItem('registrationUserName', response.user.username);
           sessionStorage.setItem('registrationStep', 'complete');
           sessionStorage.removeItem('registrationToken');
-          void this.navigateToEmailVerifiedPage(response.user.username);
+          void this.navigateToAccountVerifiedPage(response.user.username);
           return;
         }
 
@@ -251,6 +277,11 @@ export class EmailOtpConfirmation implements OnInit {
         sessionStorage.setItem('registrationStep', response.step);
         sessionStorage.setItem('registrationEmail', email);
 
+        if (response.step === 'mobile') {
+          void this.navigateToMobileOtpPage(response.message);
+          return;
+        }
+
         this.showRecoveryForm.set(false);
         this.statusMessage.set(response.message);
         this.isSubmitting.set(false);
@@ -263,6 +294,25 @@ export class EmailOtpConfirmation implements OnInit {
         this.isSubmitting.set(false);
       },
     });
+  }
+
+  private async navigateToAccountVerifiedPage(username: string): Promise<void> {
+    try {
+      const navigated = await this.router.navigateByUrl('/account-verified', {
+        state: { username },
+      });
+      if (!navigated) {
+        this.statusMessage.set(
+          'Your email was verified and your account was created, but the confirmation page could not be opened.',
+        );
+        this.isSubmitting.set(false);
+      }
+    } catch {
+      this.statusMessage.set(
+        'Your email was verified and your account was created, but the confirmation page could not be opened.',
+      );
+      this.isSubmitting.set(false);
+    }
   }
 
 }
