@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/users', authenticateToken, requireRole('admin'), async (_req, res) => {
   try {
     const [users] = await pool.execute(
-      `SELECT user_id, username, email, mobile, role, created_at
+      `SELECT user_id, username, email, mobile, role, mobile_verified, created_at
        FROM users
        ORDER BY user_id DESC`
     );

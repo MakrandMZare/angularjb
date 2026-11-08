@@ -2,10 +2,8 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { randomInt, randomUUID } = require('node:crypto');
-const {
-  sendEmailOtp,
-  sendMobileOtp
-} = require('../services/otpDelivery');
+const { sendEmailOtp } = require('../services/otpDelivery');
+const { verifyFirebasePhoneIdToken } = require('../services/firebasePhoneAuth');
 
 const router = express.Router();
 const OTP_TTL_MINUTES = 30;
@@ -87,10 +85,9 @@ async function findPendingRegistration(pool, registrationId) {
   const [rows] = await pool.execute(
     `SELECT registration_id, username, email, mobile, password_hash,
             email_otp_hash, email_otp_attempts, email_otp_expires_at, email_verified,
-            mobile_otp_hash, mobile_otp_attempts, mobile_otp_expires_at, mobile_verified,
+            mobile_verified,
             expires_at,
-            TIMESTAMPDIFF(SECOND, email_last_sent_at, UTC_TIMESTAMP()) AS email_seconds_since_sent,
-            TIMESTAMPDIFF(SECOND, mobile_last_sent_at, UTC_TIMESTAMP()) AS mobile_seconds_since_sent
+            TIMESTAMPDIFF(SECOND, email_last_sent_at, UTC_TIMESTAMP()) AS email_seconds_since_sent
      FROM pending_registrations
      WHERE registration_id = ?`,
     [registrationId]
@@ -99,37 +96,23 @@ async function findPendingRegistration(pool, registrationId) {
   return rows[0];
 }
 
-async function sendNewMobileOtp(pool, pending) {
-  const mobileOtp = createOtp();
-  const mobileOtpHash = await bcrypt.hash(mobileOtp, 10);
-  await pool.execute(
-    `UPDATE pending_registrations
-     SET mobile_otp_hash = ?,
-         mobile_otp_attempts = 0,
-         mobile_otp_expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${OTP_TTL_MINUTES} MINUTE),
-         mobile_last_sent_at = UTC_TIMESTAMP(),
-         expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${REGISTRATION_SESSION_TTL_HOURS} HOUR)
-     WHERE registration_id = ?`,
-    [mobileOtpHash, pending.registration_id]
-  );
-
-  try {
-    await sendMobileOtp(pending.mobile, mobileOtp);
-  } catch (error) {
-    await pool.execute(
-      `UPDATE pending_registrations
-       SET mobile_otp_hash = NULL,
-           mobile_otp_expires_at = NULL,
-           mobile_last_sent_at = NULL
-       WHERE registration_id = ?`,
-      [pending.registration_id]
-    );
-    throw error;
-  }
-}
-
 function isExpired(dateValue) {
   return !dateValue || new Date(dateValue).getTime() <= Date.now();
+}
+
+function normalizePhoneNumber(mobile) {
+  const digits = String(mobile ?? '').replace(/\D/g, '').replace(/^0+/, '');
+  const countryCode = String(process.env.FIREBASE_DEFAULT_COUNTRY_CODE || '91').replace(/\D/g, '');
+  if (!/^\d{1,3}$/.test(countryCode)) {
+    throw new Error('FIREBASE_DEFAULT_COUNTRY_CODE must contain 1 to 3 digits');
+  }
+  if (digits.length === 10) {
+    return `+${countryCode}${digits}`;
+  }
+  if (digits.length >= 11 && digits.length <= 15) {
+    return `+${digits}`;
+  }
+  throw new Error('Pending mobile number is not a valid international phone number');
 }
 
 function handleServerError(label, error, res) {
@@ -224,45 +207,26 @@ router.post('/register', async (req, res) => {
     }
 
     const registrationId = randomUUID();
-    const registrationToken = createRegistrationToken(registrationId, 'email');
-    const emailOtp = createOtp();
-    const emailOtpHash = await bcrypt.hash(emailOtp, 10);
+    const registrationToken = createRegistrationToken(registrationId, 'mobile');
     const passwordHash = await bcrypt.hash(password, 12);
 
     await pool.execute(
       `INSERT INTO pending_registrations
-         (registration_id, username, email, mobile, password_hash,
-          email_otp_hash, email_otp_expires_at, email_last_sent_at, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?,
-               DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${OTP_TTL_MINUTES} MINUTE),
-               UTC_TIMESTAMP(),
+       (registration_id, username, email, mobile, password_hash,
+        email_last_sent_at, expires_at)
+       VALUES (?, ?, ?, ?, ?, UTC_TIMESTAMP(),
                DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${REGISTRATION_SESSION_TTL_HOURS} HOUR))`,
       [
         registrationId,
         cleanUsername,
         cleanEmail,
         cleanMobile,
-        passwordHash,
-        emailOtpHash
+        passwordHash
       ]
     );
 
-    try {
-      const delivery = await sendEmailOtp(cleanEmail, cleanUsername, emailOtp);
-      logEmailOtpAccepted(delivery);
-    } catch (error) {
-      await pool.execute(
-        'DELETE FROM pending_registrations WHERE registration_id = ?',
-        [registrationId]
-      );
-      console.error('Email OTP delivery failed:', error.message);
-      return res.status(502).json({
-        error: 'Could not send the verification email. Check the email service configuration and try again.'
-      });
-    }
-
     return res.status(201).json({
-      message: 'A verification code was sent to your email address.',
+      message: 'Registration started. Send a verification code to your mobile number to continue.',
       registrationToken
     });
   } catch (error) {
@@ -283,17 +247,11 @@ router.post('/register/resume', async (req, res) => {
   }
 
   let pending;
-  let otp;
-  let otpHash;
-  let step;
+  let pool;
   try {
-    const pool = require('../db');
+    pool = require('../db');
     const [rows] = await pool.execute(
-      `SELECT registration_id, username, email, mobile, password_hash,
-              email_verified, mobile_verified,
-              email_otp_expires_at, mobile_otp_expires_at, expires_at,
-              TIMESTAMPDIFF(SECOND, email_last_sent_at, UTC_TIMESTAMP()) AS email_seconds_since_sent,
-              TIMESTAMPDIFF(SECOND, mobile_last_sent_at, UTC_TIMESTAMP()) AS mobile_seconds_since_sent
+      `SELECT registration_id, mobile_verified, expires_at
        FROM pending_registrations
        WHERE LOWER(email) = LOWER(?)
        LIMIT 1`,
@@ -315,41 +273,6 @@ router.post('/register/resume', async (req, res) => {
         error: 'This registration is complete. Please log in instead.'
       });
     }
-
-    if (pending.email_verified) {
-      return res.json({
-        message: 'Email verified. Continue by verifying your mobile number.',
-        registrationToken: createRegistrationToken(pending.registration_id, 'mobile'),
-        step: 'mobile'
-      });
-    }
-
-    step = 'email';
-    const secondsSinceSent = Number(pending.email_seconds_since_sent);
-    if (secondsSinceSent < 60) {
-      if (isExpired(pending.email_otp_expires_at)) {
-        return res.status(429).json({ error: 'Wait a minute before requesting another code' });
-      }
-
-      return res.json({
-        message: 'An email code was requested recently. If it has not arrived, wait 60 seconds and select Resend code.',
-        registrationToken: createRegistrationToken(pending.registration_id, step),
-        step
-      });
-    }
-
-    otp = createOtp();
-    otpHash = await bcrypt.hash(otp, 10);
-    await pool.execute(
-      `UPDATE pending_registrations
-       SET email_otp_hash = ?,
-           email_otp_attempts = 0,
-           email_otp_expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${OTP_TTL_MINUTES} MINUTE),
-           email_last_sent_at = UTC_TIMESTAMP(),
-           expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${REGISTRATION_SESSION_TTL_HOURS} HOUR)
-       WHERE registration_id = ?`,
-      [otpHash, pending.registration_id]
-    );
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ error: 'Username, email or mobile already exists' });
@@ -357,18 +280,11 @@ router.post('/register/resume', async (req, res) => {
     return handleServerError('Registration resume', error, res);
   }
 
-  try {
-    const delivery = await sendEmailOtp(pending.email, pending.username, otp);
-    logEmailOtpAccepted(delivery);
-    return res.json({
-      message: 'A new verification code was sent to your email address.',
-      registrationToken: createRegistrationToken(pending.registration_id, step),
-      step
-    });
-  } catch (error) {
-    console.error('Email OTP delivery failed:', error.message);
-    return res.status(502).json({ error: 'Could not resend the email verification code' });
-  }
+  return res.json({
+    message: 'Registration resumed. Send a verification code to your mobile number to continue.',
+    registrationToken: createRegistrationToken(pending.registration_id, 'mobile'),
+    step: 'mobile'
+  });
 });
 
 router.post('/register/resend-email', async (req, res) => {
@@ -467,20 +383,8 @@ router.post('/register/verify-email', async (req, res) => {
       pending.email_verified = 1;
     }
 
-    if (!pending.mobile_otp_hash || isExpired(pending.mobile_otp_expires_at)) {
-      try {
-        await sendNewMobileOtp(pool, pending);
-      } catch (error) {
-        console.error('Mobile OTP delivery failed:', error.message);
-        return res.status(502).json({
-          error: 'Email verified, but could not send the mobile verification code. Please try again.',
-          emailVerified: true
-        });
-      }
-    }
-
     return res.json({
-      message: 'Email verified. A mobile verification code has been sent.',
+      message: 'Email verified. Continue to mobile verification.',
       registrationToken: createRegistrationToken(claims.sub, 'mobile'),
       step: 'mobile'
     });
@@ -494,81 +398,15 @@ router.post('/register/verify-email', async (req, res) => {
   }
 });
 
-router.post('/register/resend-mobile', async (req, res) => {
-  const claims = requireRegistrationClaims(req, res, 'mobile');
-  if (!claims) {
-    return;
-  }
-
-  let pending;
-  let pool;
-  let mobileOtp;
-  let mobileOtpHash;
-  try {
-    pool = require('../db');
-    pending = await findPendingRegistration(pool, claims.sub);
-    if (
-      !pending ||
-      isExpired(pending.expires_at) ||
-      !pending.email_verified ||
-      pending.mobile_verified
-    ) {
-      return res.status(410).json({ error: 'This mobile verification session has expired' });
-    }
-
-    if (
-      pending.mobile_otp_hash &&
-      !isExpired(pending.mobile_otp_expires_at) &&
-      Number(pending.mobile_seconds_since_sent) < 60
-    ) {
-      return res.status(429).json({ error: 'Wait a minute before requesting another code' });
-    }
-
-    mobileOtp = createOtp();
-    mobileOtpHash = await bcrypt.hash(mobileOtp, 10);
-    await pool.execute(
-      `UPDATE pending_registrations
-       SET mobile_otp_hash = ?,
-           mobile_otp_attempts = 0,
-           mobile_otp_expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${OTP_TTL_MINUTES} MINUTE),
-           mobile_last_sent_at = UTC_TIMESTAMP(),
-           expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ${REGISTRATION_SESSION_TTL_HOURS} HOUR)
-       WHERE registration_id = ?`,
-      [mobileOtpHash, claims.sub]
-    );
-  } catch (error) {
-    return handleServerError('Mobile OTP resend', error, res);
-  }
-
-  try {
-    await sendMobileOtp(pending.mobile, mobileOtp);
-    return res.json({
-      message: 'A new verification code was sent to your mobile number.',
-      registrationToken: createRegistrationToken(claims.sub, 'mobile')
-    });
-  } catch (error) {
-    await pool.execute(
-      `UPDATE pending_registrations
-       SET mobile_otp_hash = NULL,
-           mobile_otp_expires_at = NULL,
-           mobile_last_sent_at = NULL
-       WHERE registration_id = ?`,
-      [claims.sub]
-    );
-    console.error('Mobile OTP delivery failed:', error.message);
-    return res.status(502).json({ error: 'Could not resend the mobile verification code' });
-  }
-});
-
 router.post('/register/verify-mobile', async (req, res) => {
   const claims = requireRegistrationClaims(req, res, 'mobile');
   if (!claims) {
     return;
   }
 
-  const { otp } = req.body ?? {};
-  if (!isNonEmptyString(otp) || !/^\d{6}$/.test(otp)) {
-    return res.status(400).json({ error: 'Enter the 6-digit mobile verification code' });
+  const { firebaseIdToken } = req.body ?? {};
+  if (!isNonEmptyString(firebaseIdToken) || firebaseIdToken.length > 10000) {
+    return res.status(400).json({ error: 'Complete phone verification before continuing' });
   }
 
   let connection;
@@ -576,44 +414,52 @@ router.post('/register/verify-mobile', async (req, res) => {
   try {
     const pool = require('../db');
     const pending = await findPendingRegistration(pool, claims.sub);
-    if (
-      !pending ||
-      isExpired(pending.expires_at) ||
-      isExpired(pending.mobile_otp_expires_at) ||
-      !pending.email_verified
-    ) {
-      return res.status(410).json({ error: 'This mobile verification code has expired' });
+    if (!pending || isExpired(pending.expires_at)) {
+      return res.status(410).json({ error: 'This registration session has expired' });
     }
 
     if (pending.mobile_verified) {
       return res.status(409).json({ error: 'This mobile number is already verified' });
     }
 
-    if (Number(pending.mobile_otp_attempts) >= MAX_OTP_ATTEMPTS) {
-      return res.status(429).json({ error: 'Too many incorrect codes. Request a new code.' });
+    let verifiedPhone;
+    try {
+      verifiedPhone = await verifyFirebasePhoneIdToken(firebaseIdToken);
+    } catch (error) {
+      const code = error.code || '';
+      console.error('Firebase phone verification failed:', code || 'token verification unavailable');
+      if (code.startsWith('auth/') && code !== 'auth/insufficient-permission') {
+        return res.status(401).json({ error: 'Firebase phone verification is invalid or expired' });
+      }
+      return res.status(503).json({
+        error: 'Firebase phone verification is temporarily unavailable. Please try again.'
+      });
     }
 
-    if (!(await bcrypt.compare(otp, pending.mobile_otp_hash))) {
-      await pool.execute(
-        `UPDATE pending_registrations
-         SET mobile_otp_attempts = mobile_otp_attempts + 1
-         WHERE registration_id = ?`,
-        [claims.sub]
-      );
-      return res.status(400).json({ error: 'The mobile verification code is incorrect' });
+    let expectedPhoneNumber;
+    try {
+      expectedPhoneNumber = normalizePhoneNumber(pending.mobile);
+    } catch (error) {
+      return res.status(400).json({ error: 'The registered mobile number is invalid' });
+    }
+
+    if (verifiedPhone.phoneNumber !== expectedPhoneNumber) {
+      return res.status(400).json({
+        error: 'The verified phone number does not match this registration'
+      });
     }
 
     connection = await pool.getConnection();
     await connection.beginTransaction();
     transactionStarted = true;
     const [result] = await connection.execute(
-      `INSERT INTO users (username, email, mobile, password_hash)
-       VALUES (?, ?, ?, ?)`,
+      `INSERT INTO users (username, email, mobile, password_hash, mobile_verified)
+       VALUES (?, ?, ?, ?, TRUE)`,
       [pending.username, pending.email, pending.mobile, pending.password_hash]
     );
 
     const [rows] = await connection.execute(
-      `SELECT user_id, username, email, mobile, role, created_at
+      `SELECT user_id, username, email, mobile, role, mobile_verified, created_at
        FROM users
        WHERE user_id = ?`,
       [result.insertId]
@@ -633,7 +479,7 @@ router.post('/register/verify-mobile', async (req, res) => {
     transactionStarted = false;
 
     return res.status(201).json({
-      message: 'Email and mobile verified. Your account has been created.',
+      message: `Your JanBazar account, ${user.username}, has been created successfully.`,
       user,
       token
     });
@@ -671,7 +517,7 @@ router.post('/login', async (req, res) => {
     const pool = require('../db');
     const cleanIdentifier = identifier.trim();
     const [rows] = await pool.execute(
-      `SELECT user_id, username, email, mobile, password_hash, role
+      `SELECT user_id, username, email, mobile, password_hash, role, mobile_verified
        FROM users
        WHERE LOWER(username) = LOWER(?)
           OR LOWER(email) = LOWER(?)
@@ -692,7 +538,8 @@ router.post('/login', async (req, res) => {
         username: user.username,
         email: user.email,
         mobile: user.mobile,
-        role: user.role
+        role: user.role,
+        mobile_verified: Boolean(user.mobile_verified)
       },
       token: createToken(user)
     });

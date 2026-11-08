@@ -6,7 +6,7 @@
 
     <h1 id="registration-title">Create your account</h1>
     <p class="registration-description">
-      Enter your details, then verify your email and mobile number to create your account.
+      Enter your details and verify the code sent to your mobile number to complete registration.
     </p>
 
     <form class="registration-form" [formGroup]="registrationForm" (ngSubmit)="register()" novalidate>
@@ -104,7 +104,7 @@
       }
 
       <button class="continue-button" type="submit" [disabled]="isSubmitting()">
-        {{ isSubmitting() ? 'Sending code…' : 'Send email verification code' }}
+        {{ isSubmitting() ? 'Sending code…' : 'Send mobile verification code' }}
       </button>
     </form>
 

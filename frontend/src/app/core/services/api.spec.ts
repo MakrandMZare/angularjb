@@ -76,29 +76,21 @@ describe('Api', () => {
     resendRequest.flush({ message: 'Code resent', registrationToken: 'email-token' });
   });
 
-  it('sends mobile OTP verification and resend requests', () => {
-    service.verifyMobile('mobile-token', '654321').subscribe();
+  it('sends the Firebase mobile verification token to the API', () => {
+    service.verifyMobile('mobile-token', 'firebase-id-token').subscribe();
     const verifyRequest = httpTesting.expectOne(
       `${API_BASE_URL}/auth/register/verify-mobile`,
     );
     expect(verifyRequest.request.method).toBe('POST');
     expect(verifyRequest.request.body).toEqual({
       registrationToken: 'mobile-token',
-      otp: '654321',
+      firebaseIdToken: 'firebase-id-token',
     });
     verifyRequest.flush({
       message: 'Account created',
       token: 'access-token',
       user: { username: 'jan' },
     });
-
-    service.resendMobileCode('mobile-token').subscribe();
-    const resendRequest = httpTesting.expectOne(
-      `${API_BASE_URL}/auth/register/resend-mobile`,
-    );
-    expect(resendRequest.request.method).toBe('POST');
-    expect(resendRequest.request.body).toEqual({ registrationToken: 'mobile-token' });
-    resendRequest.flush({ message: 'Code resent', registrationToken: 'mobile-token' });
   });
 
   it('sends login details to the login endpoint', () => {

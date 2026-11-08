@@ -12,11 +12,25 @@
     </div>
 
     <h1 id="verification-title">Verify your mobile number</h1>
-    <p class="verification-description">Enter the 6-digit code sent to your phone</p>
+    <p class="verification-description">
+      Firebase will send a 6-digit code to your phone. Verify it to complete registration.
+    </p>
+
+    <div id="firebase-recaptcha" class="recaptcha-container" aria-hidden="true"></div>
+
+    <button
+      class="verify-button"
+      type="button"
+      [hidden]="showRecoveryForm() || codeSent()"
+      [disabled]="isSubmitting()"
+      (click)="sendCode()"
+    >
+      {{ isSubmitting() ? 'Sending code…' : 'Send verification code' }}
+    </button>
 
     <form
       class="verification-form"
-      [hidden]="showRecoveryForm()"
+      [hidden]="showRecoveryForm() || !codeSent()"
       (submit)="verifyCode($event)"
     >
       <div class="code-entry">
@@ -42,7 +56,7 @@
       </div>
 
       <button class="verify-button" type="submit" [disabled]="isSubmitting()">
-        {{ isSubmitting() ? 'Verifying…' : 'Verify mobile number' }}
+        {{ isSubmitting() ? 'Verifying…' : 'Verify and complete registration' }}
       </button>
     </form>
 
@@ -58,8 +72,7 @@
 
     @if (showRecoveryForm()) {
       <p class="recovery-description">
-        Your registration session may have expired. Enter the same email address to continue
-        your existing registration.
+        Continue the existing registration by entering the same email and mobile number.
       </p>
       <form class="recovery-form" (submit)="resumeRegistration($event)">
         <label for="recovery-email">Email address used to register</label>
@@ -70,6 +83,15 @@
           required
           [value]="recoveryEmail()"
           (input)="onRecoveryEmailInput($event)"
+        />
+        <label for="recovery-mobile">Mobile number used to register</label>
+        <input
+          id="recovery-mobile"
+          type="tel"
+          autocomplete="tel"
+          required
+          [value]="recoveryMobile()"
+          (input)="onRecoveryMobileInput($event)"
         />
         <button class="verify-button recovery-button" type="submit" [disabled]="isSubmitting()">
           {{ isSubmitting() ? 'Resuming…' : 'Continue registration' }}

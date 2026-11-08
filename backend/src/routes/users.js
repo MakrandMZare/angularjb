@@ -107,7 +107,7 @@ async function removePhotoFile(filePath) {
 router.get('/me', authenticateToken, async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      `SELECT user_id, username, email, mobile, role, date_of_birth, gender,
+      `SELECT user_id, username, email, mobile, role, mobile_verified, date_of_birth, gender,
               profile_image_path, created_at
        FROM users
        WHERE user_id = ?
@@ -175,7 +175,7 @@ router.put('/me', authenticateToken, parseProfileUpload, async (req, res) => {
     profileSaved = true;
 
     const [rows] = await pool.execute(
-      `SELECT user_id, username, email, mobile, role, date_of_birth, gender,
+      `SELECT user_id, username, email, mobile, role, mobile_verified, date_of_birth, gender,
               profile_image_path, created_at
        FROM users
        WHERE user_id = ?

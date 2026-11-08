@@ -30,7 +30,7 @@ describe('Register', () => {
     sessionStorage.clear();
   });
 
-  it('starts email verification before creating an account', () => {
+  it('starts mobile verification before creating an account', () => {
     fixture.componentInstance.registrationForm.setValue({
       username: 'jan',
       mobile: '9876543210',
@@ -51,13 +51,14 @@ describe('Register', () => {
       email: 'jan@example.com',
       password: 'secure-password',
     });
-    request.flush({ registrationToken: 'email-registration-token' });
+    request.flush({ registrationToken: 'mobile-registration-token' });
 
-    expect(sessionStorage.getItem('registrationToken')).toBe('email-registration-token');
-    expect(navigateByUrl).toHaveBeenCalledWith('/email-otp-confirmation');
+    expect(sessionStorage.getItem('registrationToken')).toBe('mobile-registration-token');
+    expect(sessionStorage.getItem('registrationStep')).toBe('mobile');
+    expect(navigateByUrl).toHaveBeenCalledWith('/mobile-otp-confirmation');
   });
 
-  it('opens email OTP recovery when registration already exists', () => {
+  it('opens mobile OTP recovery when registration already exists', () => {
     fixture.componentInstance.registrationForm.setValue({
       username: 'jan',
       mobile: '9876543210',
@@ -77,6 +78,38 @@ describe('Register', () => {
 
     expect(sessionStorage.getItem('registrationToken')).toBeNull();
     expect(sessionStorage.getItem('registrationEmail')).toBe('jan@example.com');
-    expect(navigateByUrl).toHaveBeenCalledWith('/email-otp-confirmation');
+    expect(navigateByUrl).toHaveBeenCalledWith('/mobile-otp-confirmation');
+  });
+
+  it('keeps the registration session and opens OTP entry when SMS delivery fails', () => {
+    fixture.componentInstance.registrationForm.setValue({
+      username: 'jan',
+      mobile: '9876543210',
+      email: 'jan@example.com',
+      password: 'secure-password',
+      confirmPassword: 'secure-password',
+      acceptTerms: true,
+    });
+
+    fixture.componentInstance.register();
+    httpTestingController
+      .expectOne('http://localhost:3000/api/auth/register')
+      .flush(
+        {
+          error: 'Could not send the mobile verification code. Request a new code to try again.',
+          registrationToken: 'pending-mobile-token',
+        },
+        { status: 502, statusText: 'Bad Gateway' },
+      );
+
+    expect(sessionStorage.getItem('registrationToken')).toBe('pending-mobile-token');
+    expect(sessionStorage.getItem('registrationStep')).toBe('mobile');
+    expect(sessionStorage.getItem('registrationEmail')).toBe('jan@example.com');
+    expect(navigateByUrl).toHaveBeenCalledWith('/mobile-otp-confirmation', {
+      state: {
+        deliveryError:
+          'Could not send the mobile verification code. Request a new code to try again.',
+      },
+    });
   });
 });

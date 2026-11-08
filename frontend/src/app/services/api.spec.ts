@@ -58,27 +58,20 @@ describe('Api', () => {
     resendEmail.flush({ message: 'Code resent', registrationToken: 'email-token' });
   });
 
-  it('uses the mobile verification and resend endpoints', () => {
-    service.verifyMobile('mobile-token', '654321').subscribe();
+  it('uses the Firebase mobile verification endpoint', () => {
+    service.verifyMobile('mobile-token', 'firebase-id-token').subscribe();
     const mobileVerification = httpTesting.expectOne(
       'http://localhost:3000/api/auth/register/verify-mobile',
     );
     expect(mobileVerification.request.body).toEqual({
       registrationToken: 'mobile-token',
-      otp: '654321',
+      firebaseIdToken: 'firebase-id-token',
     });
     mobileVerification.flush({
       message: 'Account created',
       token: 'access-token',
       user: { username: 'jan' },
     });
-
-    service.resendMobileCode('mobile-token').subscribe();
-    const resendMobile = httpTesting.expectOne(
-      'http://localhost:3000/api/auth/register/resend-mobile',
-    );
-    expect(resendMobile.request.body).toEqual({ registrationToken: 'mobile-token' });
-    resendMobile.flush({ message: 'Code resent', registrationToken: 'mobile-token' });
   });
 
   it('uses the login and protected user endpoints', () => {

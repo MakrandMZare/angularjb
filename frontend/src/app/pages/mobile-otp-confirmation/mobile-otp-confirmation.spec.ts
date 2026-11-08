@@ -2,21 +2,37 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { FirebasePhoneAuth } from '../../core/services/firebase-phone-auth';
 import { MobileOtpConfirmation } from './mobile-otp-confirmation';
 
 describe('MobileOtpConfirmation', () => {
   let fixture: ComponentFixture<MobileOtpConfirmation>;
   let httpTestingController: HttpTestingController;
   let navigateByUrl: ReturnType<typeof vi.fn>;
+  let firebasePhoneAuth: {
+    normalizePhoneNumber: ReturnType<typeof vi.fn>;
+    sendCode: ReturnType<typeof vi.fn>;
+    verifyCode: ReturnType<typeof vi.fn>;
+    clear: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     sessionStorage.setItem('registrationToken', 'mobile-registration-token');
+    sessionStorage.setItem('registrationMobile', '9876543210');
     navigateByUrl = vi.fn();
+    firebasePhoneAuth = {
+      normalizePhoneNumber: vi.fn((mobile: string) => `+91${mobile.replace(/\D/g, '')}`),
+      sendCode: vi.fn().mockResolvedValue(undefined),
+      verifyCode: vi.fn().mockResolvedValue('firebase-id-token'),
+      clear: vi.fn().mockResolvedValue(undefined),
+    };
+
     await TestBed.configureTestingModule({
       imports: [MobileOtpConfirmation],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: FirebasePhoneAuth, useValue: firebasePhoneAuth },
         {
           provide: Router,
           useValue: { navigateByUrl, getCurrentNavigation: () => null },
@@ -26,7 +42,9 @@ describe('MobileOtpConfirmation', () => {
 
     httpTestingController = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(MobileOtpConfirmation);
+    fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   afterEach(() => {
@@ -35,8 +53,10 @@ describe('MobileOtpConfirmation', () => {
     localStorage.clear();
   });
 
-  it('renders the mobile verification screen with six code slots', () => {
+  it('sends an SMS code and renders six code slots', () => {
+    expect(firebasePhoneAuth.sendCode).toHaveBeenCalledWith('+919876543210');
     expect(fixture.nativeElement.textContent).toContain('Verify your mobile number');
+    expect(fixture.nativeElement.textContent).toContain('complete registration');
     expect(fixture.nativeElement.querySelectorAll('.code-slot').length).toBe(6);
   });
 
@@ -50,64 +70,65 @@ describe('MobileOtpConfirmation', () => {
     expect(input.value).toBe('123456');
   });
 
-  it('does not send an incomplete verification code', () => {
-    fixture.nativeElement.querySelector('.verify-button').click();
+  it('does not send an incomplete verification code', async () => {
+    await fixture.componentInstance.verifyCode(new Event('submit') as SubmitEvent);
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain(
       'Enter all 6 digits to verify your mobile number.',
     );
+    expect(firebasePhoneAuth.verifyCode).not.toHaveBeenCalled();
     httpTestingController.expectNone('http://localhost:3000/api/auth/register/verify-mobile');
   });
 
-  it('does not verify without a registration token', () => {
+  it('requires a registration token to finish verification', async () => {
     sessionStorage.removeItem('registrationToken');
     const component = fixture.componentInstance;
     component.verificationCode.set('654321');
 
-    component.verifyCode(new Event('submit') as SubmitEvent);
+    await component.verifyCode(new Event('submit') as SubmitEvent);
 
     expect(component.statusMessage()).toBe(
-      'Enter your registered email below to continue the existing registration.',
+      'Enter the email and mobile number used to register to continue.',
     );
-    expect(component.isSubmitting()).toBe(false);
+    expect(firebasePhoneAuth.verifyCode).not.toHaveBeenCalled();
     httpTestingController.expectNone('http://localhost:3000/api/auth/register/verify-mobile');
   });
 
-  it('creates the account and opens the personalized success page after mobile verification', () => {
-    const input = fixture.nativeElement.querySelector('.code-input') as HTMLInputElement;
-    input.value = '654321';
-    input.dispatchEvent(new Event('input'));
-    fixture.detectChanges();
-    fixture.nativeElement.querySelector('.verify-button').click();
+  it('creates the account after Firebase confirms the mobile number', async () => {
+    const component = fixture.componentInstance;
+    component.verificationCode.set('654321');
+    await component.verifyCode(new Event('submit') as SubmitEvent);
 
     const request = httpTestingController.expectOne(
       'http://localhost:3000/api/auth/register/verify-mobile',
     );
     expect(request.request.body).toEqual({
       registrationToken: 'mobile-registration-token',
-      otp: '654321',
+      firebaseIdToken: 'firebase-id-token',
     });
     request.flush({
-      message: 'Account created',
+      message: 'Your JanBazar account, jan, has been created successfully.',
       token: 'access-token',
-      user: { username: 'jan' },
+      user: { username: 'jan', mobile_verified: true },
     });
-    fixture.detectChanges();
 
     expect(localStorage.getItem('jwt_token')).toBe('access-token');
+    expect(firebasePhoneAuth.clear).toHaveBeenCalled();
     expect(sessionStorage.getItem('registrationUserName')).toBe('jan');
     expect(navigateByUrl).toHaveBeenCalledWith('/account-verified', {
-      state: { username: 'jan' },
+      state: {
+        username: 'jan',
+        statusMessage: 'Your JanBazar account, jan, has been created successfully.',
+        mobileVerified: true,
+      },
     });
   });
 
-  it('does not report success when the API omits account credentials', () => {
+  it('does not report success when the API omits account credentials', async () => {
     const component = fixture.componentInstance;
     component.verificationCode.set('654321');
-
-    component.verifyCode(new Event('submit') as SubmitEvent);
-
+    await component.verifyCode(new Event('submit') as SubmitEvent);
     httpTestingController
       .expectOne('http://localhost:3000/api/auth/register/verify-mobile')
       .flush({ message: 'Account created', user: { username: 'jan' } });
@@ -120,49 +141,40 @@ describe('MobileOtpConfirmation', () => {
     expect(sessionStorage.getItem('registrationUserName')).toBeNull();
   });
 
-  it('updates the registration token after resending the code', () => {
+  it('resends by requesting another Firebase code', async () => {
     const component = fixture.componentInstance;
 
     component.resendCode();
+    await fixture.whenStable();
 
-    const request = httpTestingController.expectOne(
-      'http://localhost:3000/api/auth/register/resend-mobile',
-    );
-    expect(request.request.body).toEqual({
-      registrationToken: 'mobile-registration-token',
-    });
-    request.flush({
-      message: 'A new verification code was sent to your mobile number.',
-      registrationToken: 'refreshed-mobile-token',
-    });
-
-    expect(sessionStorage.getItem('registrationToken')).toBe('refreshed-mobile-token');
-    expect(component.statusMessage()).toBe(
-      'A new verification code was sent to your mobile number.',
-    );
+    expect(firebasePhoneAuth.sendCode).toHaveBeenCalledTimes(2);
+    expect(component.statusMessage()).toContain('A verification code was sent');
     expect(component.isSubmitting()).toBe(false);
+    httpTestingController.expectNone('http://localhost:3000/api/auth/register/resend-mobile');
   });
 
-  it('resumes an email-verified registration and restores its mobile step', () => {
+  it('resumes an email-verified registration and requests its mobile code', async () => {
     const component = fixture.componentInstance;
     component.showRecoveryForm.set(true);
     component.recoveryEmail.set('jan@example.com');
+    component.recoveryMobile.set('9876543210');
 
     component.resumeRegistration(new Event('submit') as SubmitEvent);
-
     const request = httpTestingController.expectOne(
       'http://localhost:3000/api/auth/register/resume',
     );
     expect(request.request.body).toEqual({ email: 'jan@example.com' });
     request.flush({
-      message: 'A new verification code was sent to your mobile number.',
+      message: 'Registration resumed. Continue to mobile verification.',
       registrationToken: 'resumed-mobile-token',
       step: 'mobile',
     });
+    await fixture.whenStable();
 
     expect(sessionStorage.getItem('registrationToken')).toBe('resumed-mobile-token');
     expect(sessionStorage.getItem('registrationStep')).toBe('mobile');
     expect(component.showRecoveryForm()).toBe(false);
-    expect(component.statusMessage()).toContain('sent to your mobile');
+    expect(component.statusMessage()).toContain('A verification code was sent');
+    expect(firebasePhoneAuth.sendCode).toHaveBeenCalledTimes(2);
   });
 });

@@ -10,6 +10,7 @@ export interface ApiUser {
   username: string;
   email?: string;
   mobile?: string;
+  mobile_verified?: boolean | 0 | 1;
   role?: string;
   date_of_birth?: string | null;
   gender?: string | null;
@@ -86,17 +87,14 @@ export class Api {
     });
   }
 
-  verifyMobile(registrationToken: string, otp: string): Observable<AccountCreatedResponse> {
+  verifyMobile(
+    registrationToken: string,
+    firebaseIdToken: string,
+  ): Observable<AccountCreatedResponse> {
     return this.http.post<AccountCreatedResponse>(
       `${AUTH_BASE_URL}/register/verify-mobile`,
-      { registrationToken, otp },
+      { registrationToken, firebaseIdToken },
     );
-  }
-
-  resendMobileCode(registrationToken: string): Observable<RegistrationResponse> {
-    return this.http.post<RegistrationResponse>(`${AUTH_BASE_URL}/register/resend-mobile`, {
-      registrationToken,
-    });
   }
 
   login(details: LoginDetails): Observable<LoginResponse> {

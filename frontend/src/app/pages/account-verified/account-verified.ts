@@ -10,6 +10,8 @@ export class AccountVerified {
   private readonly router = inject(Router);
 
   readonly username = signal(this.getUsername());
+  readonly successMessage = signal(this.getSuccessMessage());
+  readonly mobileVerified = signal(this.getMobileVerified());
 
   private getUsername(): string {
     const navigationUsername = this.router.getCurrentNavigation()?.extras.state?.['username'];
@@ -22,6 +24,21 @@ export class AccountVerified {
     }
 
     return 'there';
+  }
+
+  private getSuccessMessage(): string {
+    const navigationMessage = this.router.getCurrentNavigation()?.extras.state?.['statusMessage'];
+    if (typeof navigationMessage === 'string' && navigationMessage.trim()) {
+      return navigationMessage;
+    }
+
+    return `Your JanBazar account, ${this.username()}, has been created successfully.`;
+  }
+
+  private getMobileVerified(): boolean | null {
+    const mobileVerified =
+      this.router.getCurrentNavigation()?.extras.state?.['mobileVerified'];
+    return typeof mobileVerified === 'boolean' ? mobileVerified : null;
   }
 
   goToHome(): void {

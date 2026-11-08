@@ -6,6 +6,7 @@ import { Api, RegistrationResponse } from '../../services/api';
 
 interface RegisterErrorResponse {
   error?: string;
+  registrationToken?: string;
 }
 
 @Component({
@@ -28,7 +29,7 @@ export class Register implements OnInit {
       return;
     }
 
-    const registrationStep = sessionStorage.getItem('registrationStep') ?? 'email';
+    const registrationStep = sessionStorage.getItem('registrationStep') ?? 'mobile';
     const route = registrationStep === 'mobile' ? '/mobile-otp-confirmation' : '/email-otp-confirmation';
     void this.router.navigateByUrl(route);
   }
@@ -78,15 +79,16 @@ export class Register implements OnInit {
       .subscribe({
         next: (response: RegistrationResponse) => {
           if (!response.registrationToken) {
-            this.apiError.set('The server did not start email verification. Please try again.');
+            this.apiError.set('The server did not start mobile verification. Please try again.');
             this.isSubmitting.set(false);
             return;
           }
 
           sessionStorage.setItem('registrationToken', response.registrationToken);
-          sessionStorage.setItem('registrationStep', 'email');
+          sessionStorage.setItem('registrationStep', 'mobile');
           sessionStorage.setItem('registrationEmail', email.trim().toLowerCase());
-          void this.router.navigateByUrl('/email-otp-confirmation');
+          sessionStorage.setItem('registrationMobile', mobile.trim());
+          void this.router.navigateByUrl('/mobile-otp-confirmation');
         },
         error: (error: HttpErrorResponse) => {
           if (error.status === 0) {
@@ -95,6 +97,22 @@ export class Register implements OnInit {
             );
           } else {
             const response = error.error as RegisterErrorResponse;
+            if (response?.registrationToken) {
+              const emailAddress = email.trim().toLowerCase();
+              sessionStorage.setItem('registrationToken', response.registrationToken);
+              sessionStorage.setItem('registrationStep', 'mobile');
+              sessionStorage.setItem('registrationEmail', emailAddress);
+              sessionStorage.setItem('registrationMobile', mobile.trim());
+              void this.router.navigateByUrl('/mobile-otp-confirmation', {
+                state: {
+                  deliveryError:
+                    response.error ??
+                    'Your registration is saved, but the mobile verification code could not be sent. Request a new code below.',
+                },
+              });
+              return;
+            }
+
             const isPendingRegistration =
               (response?.error ?? '').includes('A registration is already in progress');
 
@@ -102,7 +120,8 @@ export class Register implements OnInit {
               sessionStorage.removeItem('registrationToken');
               sessionStorage.removeItem('registrationStep');
               sessionStorage.setItem('registrationEmail', email.trim().toLowerCase());
-              void this.router.navigateByUrl('/email-otp-confirmation');
+              sessionStorage.setItem('registrationMobile', mobile.trim());
+              void this.router.navigateByUrl('/mobile-otp-confirmation');
               this.isSubmitting.set(false);
               return;
             }

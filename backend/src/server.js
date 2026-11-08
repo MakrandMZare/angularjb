@@ -28,10 +28,7 @@ app.get('/', (_req, res) => {
     endpoints: {
       register: 'POST /api/auth/register',
       resumeRegistration: 'POST /api/auth/register/resume',
-      verifyEmail: 'POST /api/auth/register/verify-email',
-      resendEmailCode: 'POST /api/auth/register/resend-email',
       verifyMobile: 'POST /api/auth/register/verify-mobile',
-      resendMobileCode: 'POST /api/auth/register/resend-mobile',
       login: 'POST /api/auth/login',
       currentUser: 'GET /api/users/me (Bearer access token required)',
       adminUsers: 'GET /api/admin/users (admin access token required)'

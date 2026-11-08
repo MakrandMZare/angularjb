@@ -5,10 +5,12 @@ import { AccountVerified } from './account-verified';
 describe('AccountVerified', () => {
   let fixture: ComponentFixture<AccountVerified>;
   let navigateByUrl: ReturnType<typeof vi.fn>;
+  let navigationState: Record<string, unknown>;
 
   beforeEach(async () => {
     sessionStorage.setItem('registrationUserName', 'Makrand');
     navigateByUrl = vi.fn();
+    navigationState = {};
     await TestBed.configureTestingModule({
       imports: [AccountVerified],
       providers: [
@@ -16,7 +18,7 @@ describe('AccountVerified', () => {
           provide: Router,
           useValue: {
             navigateByUrl,
-            getCurrentNavigation: () => ({ extras: { state: {} } }),
+            getCurrentNavigation: () => ({ extras: { state: navigationState } }),
           },
         },
       ],
@@ -30,13 +32,10 @@ describe('AccountVerified', () => {
     sessionStorage.clear();
   });
 
-  it('welcomes the registered user after email verification and account creation', () => {
+  it('confirms successful registration after mobile verification', () => {
     expect(fixture.nativeElement.textContent).toContain('Welcome, Makrand!');
     expect(fixture.nativeElement.textContent).toContain(
-      'Your email has been verified successfully, and your JanBazar account has been created',
-    );
-    expect(fixture.nativeElement.textContent).toContain(
-      'your JanBazar account has been created for Makrand.',
+      'Your JanBazar account, Makrand, has been created successfully.',
     );
   });
 
@@ -44,5 +43,29 @@ describe('AccountVerified', () => {
     fixture.nativeElement.querySelector('.create-account-button').click();
 
     expect(navigateByUrl).toHaveBeenCalledWith('/');
+  });
+
+  it('shows the successful-registration message from mobile verification', async () => {
+    navigationState = {
+      statusMessage: 'Your JanBazar account, Makrand, has been created successfully.',
+      mobileVerified: true,
+    };
+    fixture.destroy();
+    fixture = TestBed.createComponent(AccountVerified);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain(
+      'Your JanBazar account, Makrand, has been created successfully.',
+    );
+    expect(fixture.nativeElement.textContent).toContain('Mobile verification: Yes');
+  });
+
+  it('displays No when the account is not marked as mobile verified', async () => {
+    navigationState = { mobileVerified: false };
+    fixture.destroy();
+    fixture = TestBed.createComponent(AccountVerified);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Mobile verification: No');
   });
 });

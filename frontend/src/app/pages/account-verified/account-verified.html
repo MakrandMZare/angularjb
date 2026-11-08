@@ -10,9 +10,14 @@
 
     <h1 id="verified-title">Welcome, {{ username() }}!</h1>
     <p class="verified-description">
-      Your email has been verified successfully, and your JanBazar account has been created for
-      {{ username() }}.
+      {{ successMessage() }}
     </p>
+
+    @if (mobileVerified() !== null) {
+      <p class="mobile-verification-status">
+        Mobile verification: {{ mobileVerified() ? 'Yes' : 'No' }}
+      </p>
+    }
 
     <button class="create-account-button" type="button" (click)="goToHome()">
       Go to Home
